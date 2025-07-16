@@ -21,6 +21,8 @@ EMOJIS = {
     "impair": "🔢"
 }
 
+COMMISSION = 0.05
+
 class RejoindreView(discord.ui.View):
     opposés = {"rouge": "noir", "noir": "rouge", "pair": "impair", "impair": "pair"}
 
