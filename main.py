@@ -163,8 +163,11 @@ class RejoindreView(discord.ui.View):
             value=f"{self.joueur2.mention}\nChoix : {EMOJIS[valeur_joueur2]} `{valeur_joueur2.upper()}`",
             inline=True
         )
-
+# Champ avec des tirets pour créer une ligne de séparation
+        # Vous pouvez ajuster le nombre de tirets ou utiliser d'autres caractères
+        result.add_field(name=" ", value="─" * 20, inline=False) # Utilise des tirets '─' (barre horizontale légère)
         net_gain = int(self.montant * 2 * (1 - COMMISSION))
+        
         result_embed.add_field(
             name="🏆 Gagnant",
             value=f"**{gagnant.mention}** remporte **{net_gain:,} kamas** 💰 (après 5% de commission)",
