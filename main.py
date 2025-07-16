@@ -115,14 +115,15 @@ class RejoindreView(discord.ui.View):
 
         await original_message.edit(embed=suspense_embed, view=None)
 
-                print("Avant la boucle de décompte.")
-        for i in range(10, 0, -1):
-            print(f"Décompte: {i}")
+        # --- Début de la section corrigée pour la boucle et les prints ---
+        print("Avant la boucle de décompte.")
+        for i in range(10, 0, -1): # La boucle s'exécute 10 fois (de 10 à 1 inclus)
+            print(f"Décompte: {i}") # Ce print s'exécute à chaque itération
             await asyncio.sleep(1)
-            suspense_embed.title = f"🎰 Tirage en cours ..."
+            suspense_embed.title = f"🎰 Tirage en cours ... {i}" # J'ajoute le décompte ici pour un meilleur feedback
             await original_message.edit(embed=suspense_embed)
-        
-        print("Après la boucle de décompte. La boucle est terminée.") # <-- Déplacé ici !
+        print("Après la boucle de décompte. La boucle est terminée.") # Ce print s'exécute UNE SEULE FOIS après la boucle
+        # --- Fin de la section corrigée ---
 
 
         # 3. Tirage de la roulette et détermination du gagnant
@@ -168,9 +169,9 @@ class RejoindreView(discord.ui.View):
             value=f"{self.joueur2.mention}\nChoix : {EMOJIS[valeur_joueur2]} `{valeur_joueur2.upper()}`",
             inline=True
         )
-# Champ avec des tirets pour créer une ligne de séparation
-        # Vous pouvez ajuster le nombre de tirets ou utiliser d'autres caractères
-        result.add_field(name=" ", value="─" * 20, inline=False) # Utilise des tirets '─' (barre horizontale légère)
+        # Champ avec des tirets pour créer une ligne de séparation
+        # ATTENTION : La variable pour l'embed ici DOIT être `result_embed`, pas `result`
+        result_embed.add_field(name=" ", value="─" * 20, inline=False) # Utilise des tirets '─' (barre horizontale légère)
         net_gain = int(self.montant * 2 * (1 - COMMISSION))
         
         result_embed.add_field(
