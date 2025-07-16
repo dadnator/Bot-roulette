@@ -120,7 +120,7 @@ class RejoindreView(discord.ui.View):
         for i in range(10, 0, -1): # La boucle s'exécute 10 fois (de 10 à 1 inclus)
             print(f"Décompte: {i}") # Ce print s'exécute à chaque itération
             await asyncio.sleep(1)
-            suspense_embed.title = f"🎰 Tirage en cours ... {i}" # J'ajoute le décompte ici pour un meilleur feedback
+            suspense_embed.title = f"🎰 Tirage en cours ..." # J'ajoute le décompte ici pour un meilleur feedback
             await original_message.edit(embed=suspense_embed)
         print("Après la boucle de décompte. La boucle est terminée.") # Ce print s'exécute UNE SEULE FOIS après la boucle
         # --- Fin de la section corrigée ---
