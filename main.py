@@ -165,7 +165,7 @@ class RejoindreView(discord.ui.View):
             value=f"{self.joueur2.mention}\nChoix : {EMOJIS[valeur_joueur2]} `{valeur_joueur2.upper()}`",
             inline=True
         )
-       net_gain = int(self.montant * 2 * (1 - COMMISSION))
+       net_gain = int(self.montant * 2 * (1 - COMMISSION)
 
 result_embed.add_field(
     name="🏆 Gagnant",
