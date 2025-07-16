@@ -174,7 +174,6 @@ class RejoindreView(discord.ui.View):
             inline=False
         )
 
-        result_embed.set_footer(text="🎰 Duel terminé • Bonne chance pour le prochain !")
         await original_message.edit(embed=result_embed, view=None)
 
         duels.pop(self.message_id, None)
