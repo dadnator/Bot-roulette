@@ -115,13 +115,15 @@ class RejoindreView(discord.ui.View):
 
         await original_message.edit(embed=suspense_embed, view=None)
 
-        print("Avant la boucle de décompte.")
+                print("Avant la boucle de décompte.")
         for i in range(10, 0, -1):
-            print(f"Décompte: {i}") # Ajoutez ce print
+            print(f"Décompte: {i}")
             await asyncio.sleep(1)
             suspense_embed.title = f"🎰 Tirage en cours ..."
             await original_message.edit(embed=suspense_embed)
-            print("Après la boucle de décompte. La boucle est terminée.")
+        
+        print("Après la boucle de décompte. La boucle est terminée.") # <-- Déplacé ici !
+
 
         # 3. Tirage de la roulette et détermination du gagnant
         # Modification ici: Tirage entre 1 et 36 (exclut le 0)
