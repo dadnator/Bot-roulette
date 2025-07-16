@@ -251,7 +251,7 @@ async def duel(interaction: discord.Interaction, montant: int):
         return
 
     for duel_data in duels.values():
-    if duel_data["joueur1"].id == interaction.user.id or (
+        if duel_data["joueur1"].id == interaction.user.id or (
         "joueur2" in duel_data and duel_data["joueur2"] and duel_data["joueur2"].id == interaction.user.id
     ):
         await interaction.response.send_message(
