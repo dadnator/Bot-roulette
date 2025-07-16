@@ -142,14 +142,12 @@ class RejoindreView(discord.ui.View):
         gagnant = self.joueur1 if condition_gagnante else self.joueur2
 
 
-        # 4. Message de résultat final
+         # 4. Message de résultat final
         result_embed = discord.Embed(
             title="🎲 Résultat du Duel Roulette",
             description=(
                 f"🎯 **Numéro tiré** : `{numero}`\n"
-                # Modification ici: Retire la condition pour le "vert"
                 f"{'🔴 Rouge' if couleur == 'rouge' else '⚫ Noir'} — "
-                # Modification ici: Retire la condition pour "aucune"
                 f"{'🔢 Pair' if parite == 'pair' else '🔢 Impair'}"
             ),
             color=discord.Color.green() if gagnant == self.joueur1 else discord.Color.red()
@@ -165,17 +163,15 @@ class RejoindreView(discord.ui.View):
             value=f"{self.joueur2.mention}\nChoix : {EMOJIS[valeur_joueur2]} `{valeur_joueur2.upper()}`",
             inline=True
         )
-             net_gain = int(self.montant * 2 * (1 - COMMISSION))
+
+        net_gain = int(self.montant * 2 * (1 - COMMISSION))
         result_embed.add_field(
             name="🏆 Gagnant",
             value=f"**{gagnant.mention}** remporte **{net_gain:,} kamas** 💰 (après 5% de commission)",
             inline=False
         )
 
-        )
-
         result_embed.set_footer(text="🎰 Duel terminé • Bonne chance pour le prochain !")
-
         await original_message.edit(embed=result_embed, view=None)
 
         duels.pop(self.message_id, None)
