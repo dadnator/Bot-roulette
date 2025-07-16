@@ -165,13 +165,14 @@ class RejoindreView(discord.ui.View):
             value=f"{self.joueur2.mention}\nChoix : {EMOJIS[valeur_joueur2]} `{valeur_joueur2.upper()}`",
             inline=True
         )
-        result_embed.add_field(
-            name="🏆 Gagnant",
-            net_gain = int(self.montant * 2 * (1 - COMMISSION))
-value=f"**{gagnant.mention}** remporte **{net_gain:,} kamas** 💰 (après 5% de commission)",
+       net_gain = int(self.montant * 2 * (1 - COMMISSION))
 
-            inline=False
+result_embed.add_field(
+    name="🏆 Gagnant",
+    value=f"**{gagnant.mention}** remporte **{net_gain:,} kamas** 💰 (après 5% de commission)",
+    inline=False
         )
+
         result_embed.set_footer(text="🎰 Duel terminé • Bonne chance pour le prochain !")
 
         await original_message.edit(embed=result_embed, view=None)
