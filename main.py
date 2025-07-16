@@ -165,7 +165,9 @@ class RejoindreView(discord.ui.View):
         )
         result_embed.add_field(
             name="🏆 Gagnant",
-            value=f"**{gagnant.mention}** remporte **{2 * self.montant:,} kamas** 💰",
+            net_gain = int(self.montant * 2 * (1 - COMMISSION))
+value=f"**{gagnant.mention}** remporte **{net_gain:,} kamas** 💰 (après 5% de commission)",
+
             inline=False
         )
         result_embed.set_footer(text="🎰 Duel terminé • Bonne chance pour le prochain !")
@@ -191,7 +193,12 @@ class PariView(discord.ui.View):
 
         embed = discord.Embed(
             title="🎰 Duel Roulette",
-            description=f"{self.joueur1.mention} a choisi : {EMOJIS[valeur]} **{valeur.upper()}** ({type_pari})\nMontant : **{self.montant:,} kamas** 💰",
+           description=(
+    f"{self.joueur1.mention} a choisi : {EMOJIS[valeur]} **{valeur.upper()}** ({type_pari})\n"
+    f"Montant misé : **{self.montant:,} kamas** 💰\n"
+    f"Commission de 5% par joueur appliquée (Total gagné : **{int(self.montant * 2 * (1 - COMMISSION)):,} kamas**)"
+),
+
             color=discord.Color.orange()
         )
         embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention} - {EMOJIS[valeur]} {valeur}", inline=True)
