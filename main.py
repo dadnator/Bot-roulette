@@ -260,9 +260,7 @@ async def duel(interaction: discord.Interaction, montant: int):
             "❌ Tu participes déjà à un autre duel. Termine-le ou utilise `/quit` pour l'annuler.",
             ephemeral=True
         )
-
         return
-
 
     embed = discord.Embed(
         title="🎰 Nouveau Duel Roulette",
