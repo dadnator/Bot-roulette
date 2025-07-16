@@ -165,11 +165,13 @@ class RejoindreView(discord.ui.View):
             value=f"{self.joueur2.mention}\nChoix : {EMOJIS[valeur_joueur2]} `{valeur_joueur2.upper()}`",
             inline=True
         )
-      net_gain = int(self.montant * 2 * (1 - COMMISSION))
-result_embed.add_field(
-    name="🏆 Gagnant",
-    value=f"**{gagnant.mention}** remporte **{net_gain:,} kamas** 💰 (après 5% de commission)",
-    inline=False
+             net_gain = int(self.montant * 2 * (1 - COMMISSION))
+        result_embed.add_field(
+            name="🏆 Gagnant",
+            value=f"**{gagnant.mention}** remporte **{net_gain:,} kamas** 💰 (après 5% de commission)",
+            inline=False
+        )
+
         )
 
         result_embed.set_footer(text="🎰 Duel terminé • Bonne chance pour le prochain !")
@@ -238,7 +240,7 @@ class PariView(discord.ui.View):
 
     @discord.ui.button(label="🔢 Impair", style=discord.ButtonStyle.blurple, custom_id="pari_impair")
     async def impair(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.lock_in_choice(interaction, "pair", "impaire") # Correction: "impaire" -> "impair"
+        await self.lock_in_choice(interaction, "pair", "impair") 
 
 @bot.tree.command(name="duel", description="Lancer un duel roulette avec un montant.")
 @app_commands.describe(montant="Montant misé en kamas")
@@ -249,7 +251,7 @@ async def duel(interaction: discord.Interaction, montant: int):
 
     for duel_data in duels.values():
         if duel_data["joueur1"].id == interaction.user.id or (
-            "joueur2" in duel_data and duel_data["joueur2"] and duel_data["jouleur2"].id == interaction.user.id
+            "joueur2" in duel_data and duel_data["joueur2"] and duel_data["joueur2"].id == interaction.user.id
         ):
             await interaction.response.send_message(
                 "❌ Tu participes déjà à un autre duel. Termine-le ou utilise `/quit` pour l'annuler.",
