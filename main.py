@@ -111,7 +111,7 @@ class RejoindreView(discord.ui.View):
             description="Prépare-toi au tirage du numéro !",
             color=discord.Color.greyple()
         )
-        suspense_embed.set_image(url="https://i.makeagif.com/media/11-22-2017/gXYMAo.gif")
+        suspense_embed.set_image(url="https://media.licdn.com/dms/image/v2/D4E12AQFgRedt7P_4MQ/article-cover_image-shrink_600_2000/article-cover_image-shrink_600_2000/0/1691072860924?e=2147483647&v=beta&t=kuzhgDcGRovfVAsYlH1l6c3J7yfulu54arsEPldFFNI")
 
         await original_message.edit(embed=suspense_embed, view=None)
 
