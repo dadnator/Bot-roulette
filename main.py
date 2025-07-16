@@ -115,10 +115,13 @@ class RejoindreView(discord.ui.View):
 
         await original_message.edit(embed=suspense_embed, view=None)
 
+        print("Avant la boucle de décompte.")
         for i in range(10, 0, -1):
+            print(f"Décompte: {i}") # Ajoutez ce print
             await asyncio.sleep(1)
             suspense_embed.title = f"🎰 Tirage en cours ..."
             await original_message.edit(embed=suspense_embed)
+            print("Après la boucle de décompte. La boucle est terminée.")
 
         # 3. Tirage de la roulette et détermination du gagnant
         # Modification ici: Tirage entre 1 et 36 (exclut le 0)
@@ -173,6 +176,7 @@ class RejoindreView(discord.ui.View):
             value=f"**{gagnant.mention}** remporte **{net_gain:,} kamas** 💰 (après 5% de commission)",
             inline=False
         )
+        result_embed.set_footer(text="🎰 Duel terminé • Bonne chance pour le prochain !")
 
         await original_message.edit(embed=result_embed, view=None)
 
