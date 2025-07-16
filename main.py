@@ -251,16 +251,14 @@ async def duel(interaction: discord.Interaction, montant: int):
         return
 
     for duel_data in duels.values():
-    if duel_data["joueur1"].id == interaction.user.id or (
-        "joueur2" in duel_data
-        and duel_data["joueur2"]
-        and duel_data["joueur2"].id == interaction.user.id
-    ):
-        await interaction.response.send_message(
-            "❌ Tu participes déjà à un autre duel. Termine-le ou utilise `/quit` pour l'annuler.",
-            ephemeral=True
-        )
-        return
+        if duel_data["joueur1"].id == interaction.user.id or (
+            "joueur2" in duel_data and duel_data["joueur2"] and duel_data["joueur2"].id == interaction.user.id
+        ):
+            await interaction.response.send_message(
+                "❌ Tu participes déjà à un autre duel. Termine-le ou utilise `/quit` pour l'annuler.",
+                ephemeral=True
+            )
+            return
 
     embed = discord.Embed(
         title="🎰 Nouveau Duel Roulette",
@@ -271,6 +269,7 @@ async def duel(interaction: discord.Interaction, montant: int):
 
     view = PariView(interaction, montant)
     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
 
 
 @bot.tree.command(name="quit", description="Annule le duel en cours que tu as lancé.")
