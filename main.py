@@ -166,7 +166,7 @@ class RejoindreView(discord.ui.View):
             inline=True
         )
        net_gain = int(self.montant * 2 * (1 - COMMISSION)
-
+        )
 result_embed.add_field(
     name="🏆 Gagnant",
     value=f"**{gagnant.mention}** remporte **{net_gain:,} kamas** 💰 (après 5% de commission)",
