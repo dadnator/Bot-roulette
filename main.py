@@ -6,9 +6,7 @@ from keep_alive import keep_alive
 import random
 import asyncio
 
-
 token = os.environ['TOKEN_BOT_DISCORD']
-
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="/", intents=intents)
@@ -85,13 +83,8 @@ class RejoindreView(discord.ui.View):
 
         await interaction.response.edit_message(embed=embed, view=self)
 
-
     async def lancer_roulette(self, interaction: discord.Interaction):
-        role_croupier_found = False
-        for role in interaction.user.roles:
-            if role.name == "croupier":
-                role_croupier_found = True
-                break
+        role_croupier_found = any(role.name == "croupier" for role in interaction.user.roles)
 
         if not role_croupier_found:
             await interaction.response.send_message("❌ Seuls les membres du groupe `croupier` peuvent lancer la roulette.", ephemeral=True)
@@ -108,47 +101,34 @@ class RejoindreView(discord.ui.View):
 
         suspense_embed = discord.Embed(
             title="🎰 La roulette tourne...",
-            description="On croise les doigts 🤞🏻  !",
+            description="On croise les doigts 🤞🏻 !",
             color=discord.Color.greyple()
         )
         suspense_embed.set_image(url="https://i.makeagif.com/media/11-22-2017/gXYMAo.gif")
-
         await original_message.edit(embed=suspense_embed, view=None)
 
-        # --- Début de la section corrigée pour la boucle et les prints ---
-        print("Avant la boucle de décompte.")
-        for i in range(10, 0, -1): # La boucle s'exécute 10 fois (de 10 à 1 inclus)
-            print(f"Décompte: {i}") # Ce print s'exécute à chaque itération
+        for i in range(10, 0, -1):
             await asyncio.sleep(1)
-            suspense_embed.title = f"🎰 Tirage en cours ..." # J'ajoute le décompte ici pour un meilleur feedback
+            suspense_embed.title = f"🎰 Tirage en cours ..."
             await original_message.edit(embed=suspense_embed)
-        print("Après la boucle de décompte. La boucle est terminée.") # Ce print s'exécute UNE SEULE FOIS après la boucle
-        # --- Fin de la section corrigée ---
 
-
-        # 3. Tirage de la roulette et détermination du gagnant
-        # Modification ici: Tirage entre 1 et 36 (exclut le 0)
         numero = random.randint(1, 36)
         ROUGES = {1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36}
         NOIRS = {2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35}
 
-        # Modification ici: Plus de "vert" pour la couleur
         couleur = "rouge" if numero in ROUGES else "noir"
-        # Modification ici: Plus de "aucune" pour la parité (le 0 étant exclu)
         parite = "pair" if numero % 2 == 0 else "impair"
 
         valeur_joueur1 = self.valeur_choisie
         valeur_joueur2 = self.opposés[valeur_joueur1]
 
-        if self.type_pari == "couleur":
-            condition_gagnante = couleur == valeur_joueur1
-        else: # type_pari == "pair"
-            condition_gagnante = parite == valeur_joueur1
+        condition_gagnante = (
+            couleur == valeur_joueur1 if self.type_pari == "couleur" else parite == valeur_joueur1
+        )
 
         gagnant = self.joueur1 if condition_gagnante else self.joueur2
+        net_gain = int(self.montant * 2 * (1 - COMMISSION))
 
-
-         # 4. Message de résultat final
         result_embed = discord.Embed(
             title="🎲 Résultat du Duel Roulette",
             description=(
@@ -158,31 +138,13 @@ class RejoindreView(discord.ui.View):
             ),
             color=discord.Color.green() if gagnant == self.joueur1 else discord.Color.red()
         )
-
-        result_embed.add_field(
-            name="👤 Joueur 1",
-            value=f"{self.joueur1.mention}\nChoix : {EMOJIS[valeur_joueur1]} `{valeur_joueur1.upper()}`",
-            inline=True
-        )
-        result_embed.add_field(
-            name="👤 Joueur 2",
-            value=f"{self.joueur2.mention}\nChoix : {EMOJIS[valeur_joueur2]} `{valeur_joueur2.upper()}`",
-            inline=True
-        )
-        # Champ avec des tirets pour créer une ligne de séparation
-        # ATTENTION : La variable pour l'embed ici DOIT être `result_embed`, pas `result`
-        result_embed.add_field(name=" ", value="─" * 20, inline=False) # Utilise des tirets '─' (barre horizontale légère)
-        net_gain = int(self.montant * 2 * (1 - COMMISSION))
-        
-        result_embed.add_field(
-            name="🏆 Gagnant",
-            value=f"**{gagnant.mention}** remporte **{net_gain:,} kamas** 💰 (après 5% de commission)",
-            inline=False
-        )
+        result_embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention}\nChoix : {EMOJIS[valeur_joueur1]} `{valeur_joueur1.upper()}`", inline=True)
+        result_embed.add_field(name="👤 Joueur 2", value=f"{self.joueur2.mention}\nChoix : {EMOJIS[valeur_joueur2]} `{valeur_joueur2.upper()}`", inline=True)
+        result_embed.add_field(name=" ", value="─" * 20, inline=False)
+        result_embed.add_field(name="🏆 Gagnant", value=f"**{gagnant.mention}** remporte **{net_gain:,} kamas** 💰 (après 5% de commission)", inline=False)
         result_embed.set_footer(text="🎰 Duel terminé • Bonne chance pour le prochain !")
 
         await original_message.edit(embed=result_embed, view=None)
-
         duels.pop(self.message_id, None)
 
 class PariView(discord.ui.View):
@@ -202,12 +164,11 @@ class PariView(discord.ui.View):
 
         embed = discord.Embed(
             title="🎰 Duel Roulette",
-           description=(
-    f"{self.joueur1.mention} a choisi : {EMOJIS[valeur]} **{valeur.upper()}** ({type_pari})\n"
-    f"Montant misé : **{self.montant:,} kamas** 💰\n"
-    f"Commission de 5% par joueur appliquée (Total gagné : **{int(self.montant * 2 * (1 - COMMISSION)):,} kamas**)"
-),
-
+            description=(
+                f"{self.joueur1.mention} a choisi : {EMOJIS[valeur]} **{valeur.upper()}** ({type_pari})\n"
+                f"Montant misé : **{self.montant:,} kamas** 💰\n"
+                f"Commission de 5% par joueur appliquée (Total gagné : **{int(self.montant * 2 * (1 - COMMISSION)):,} kamas**)"
+            ),
             color=discord.Color.orange()
         )
         embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention} - {EMOJIS[valeur]} {valeur}", inline=True)
@@ -217,9 +178,7 @@ class PariView(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=None)
 
         rejoindre_view = RejoindreView(message_id=None, joueur1=self.joueur1, type_pari=type_pari, valeur_choisie=valeur, montant=self.montant)
-
         message = await interaction.channel.send(embed=embed, view=rejoindre_view)
-
         rejoindre_view.message_id = message.id
 
         duels[message.id] = {
@@ -229,15 +188,14 @@ class PariView(discord.ui.View):
             "valeur": valeur,
             "joueur2": None
         }
-        # 🎯 Ping des rôles croupier et membre
-role_croupier = discord.utils.get(interaction.guild.roles, name="croupier")
-role_membre = discord.utils.get(interaction.guild.roles, name="membre")
 
-if role_croupier and role_membre:
-        await interaction.channel.send(
-        f"📣 {role_croupier.mention} {role_membre.mention} — Un nouveau duel est prêt ! Un croupier est attendu."
-    )
-
+        # ✅ Ping des rôles
+        role_croupier = discord.utils.get(interaction.guild.roles, name="croupier")
+        role_membre = discord.utils.get(interaction.guild.roles, name="membre")
+        if role_croupier and role_membre:
+            await interaction.channel.send(
+                f"📣 {role_croupier.mention} {role_membre.mention} — Un nouveau duel est prêt ! Un croupier est attendu."
+            )
 
     @discord.ui.button(label="🔴 Rouge", style=discord.ButtonStyle.danger, custom_id="pari_rouge")
     async def rouge(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -253,12 +211,11 @@ if role_croupier and role_membre:
 
     @discord.ui.button(label="🔢 Impair", style=discord.ButtonStyle.blurple, custom_id="pari_impair")
     async def impair(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.lock_in_choice(interaction, "pair", "impair") 
+        await self.lock_in_choice(interaction, "pair", "impair")
 
 @bot.tree.command(name="duel", description="Lancer un duel roulette avec un montant.")
 @app_commands.describe(montant="Montant misé en kamas")
 async def duel(interaction: discord.Interaction, montant: int):
-    # Vérifie que la commande est utilisée dans un salon texte nommé "roulette"
     if not isinstance(interaction.channel, discord.TextChannel) or interaction.channel.name != "roulette":
         await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #roulette.", ephemeral=True)
         return
@@ -287,8 +244,6 @@ async def duel(interaction: discord.Interaction, montant: int):
     view = PariView(interaction, montant)
     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-
-
 @bot.tree.command(name="quit", description="Annule le duel en cours que tu as lancé.")
 async def quit_duel(interaction: discord.Interaction):
     duel_a_annuler = None
@@ -304,8 +259,7 @@ async def quit_duel(interaction: discord.Interaction):
     duels.pop(duel_a_annuler)
 
     try:
-        channel = interaction.channel
-        message = await channel.fetch_message(duel_a_annuler)
+        message = await interaction.channel.fetch_message(duel_a_annuler)
         embed = message.embeds[0]
         embed.color = discord.Color.red()
         embed.title += " (Annulé)"
