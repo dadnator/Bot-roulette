@@ -160,14 +160,13 @@ class PariView(discord.ui.View):
         self.joueur1 = interaction.user
 
     async def lock_in_choice(self, interaction, type_pari, valeur):
-        if interaction.user.id != self.joueur1.id:
-    await interaction.response.send_message("❌ Seul le joueur qui a lancé le duel peut choisir le pari.", ephemeral=True)
+    if interaction.user.id != self.joueur1.id:
+        await interaction.response.send_message("❌ Seul le joueur qui a lancé le duel peut choisir le pari.", ephemeral=True)
         return
 
     opposés = {"rouge": "noir", "noir": "rouge", "pair": "impair", "impair": "pair"}
     choix_restant = opposés[valeur]
 
-    # Récupération des rôles
     role_croupier = discord.utils.get(interaction.guild.roles, name="croupier")
     role_membre = discord.utils.get(interaction.guild.roles, name="membre")
 
@@ -193,12 +192,11 @@ class PariView(discord.ui.View):
     rejoindre_view = RejoindreView(message_id=None, joueur1=self.joueur1, type_pari=type_pari, valeur_choisie=valeur, montant=self.montant)
 
     message = await interaction.channel.send(
-    content=contenu_ping,
-    embed=embed,
-    view=rejoindre_view,
-    allowed_mentions=discord.AllowedMentions(roles=True)
-)
-
+        content=contenu_ping,
+        embed=embed,
+        view=rejoindre_view,
+        allowed_mentions=discord.AllowedMentions(roles=True)
+    )
 
     rejoindre_view.message_id = message.id
 
@@ -209,6 +207,7 @@ class PariView(discord.ui.View):
         "valeur": valeur,
         "joueur2": None
     }
+
 
 
     @discord.ui.button(label="🔴 Rouge", style=discord.ButtonStyle.danger, custom_id="pari_rouge")
