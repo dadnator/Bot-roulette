@@ -234,7 +234,7 @@ role_croupier = discord.utils.get(interaction.guild.roles, name="croupier")
 role_membre = discord.utils.get(interaction.guild.roles, name="membre")
 
 if role_croupier and role_membre:
-    await interaction.channel.send(
+        await interaction.channel.send(
         f"📣 {role_croupier.mention} {role_membre.mention} — Un nouveau duel est prêt ! Un croupier est attendu."
     )
 
