@@ -188,16 +188,17 @@ class PariView(discord.ui.View):
     embed.add_field(name="👤 Joueur 2", value="🕓 En attente...", inline=True)
     embed.set_footer(text=f"📋 Pari pris : {self.joueur1.display_name} - {EMOJIS[valeur]} {valeur.upper()} | Choix restant : {EMOJIS[choix_restant]} {choix_restant.upper()}")
 
-    await interaction.response.edit_message(
-        content=contenu_ping,
-        embed=embed,
-        view=None,
-        allowed_mentions=discord.AllowedMentions(roles=True)
-    )
+    await interaction.response.edit_message(view=None)
 
-    rejoindre_view = RejoindreView(message_id=None, joueur1=self.joueur1, type_pari=type_pari, valeur_choisie=valeur, montant=self.montant)
+rejoindre_view = RejoindreView(message_id=None, joueur1=self.joueur1, type_pari=type_pari, valeur_choisie=valeur, montant=self.montant)
 
-    message = await interaction.channel.send(embed=embed, view=rejoindre_view)
+message = await interaction.channel.send(
+    content=contenu_ping,
+    embed=embed,
+    view=rejoindre_view,
+    allowed_mentions=discord.AllowedMentions(roles=True)
+)
+
 
     rejoindre_view.message_id = message.id
 
