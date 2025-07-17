@@ -161,7 +161,7 @@ class PariView(discord.ui.View):
 
     async def lock_in_choice(self, interaction, type_pari, valeur):
         if interaction.user.id != self.joueur1.id:
-        await interaction.response.send_message("❌ Seul le joueur qui a lancé le duel peut choisir le pari.", ephemeral=True)
+    await interaction.response.send_message("❌ Seul le joueur qui a lancé le duel peut choisir le pari.", ephemeral=True)
         return
 
     opposés = {"rouge": "noir", "noir": "rouge", "pair": "impair", "impair": "pair"}
