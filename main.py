@@ -190,9 +190,9 @@ class PariView(discord.ui.View):
 
     await interaction.response.edit_message(view=None)
 
-rejoindre_view = RejoindreView(message_id=None, joueur1=self.joueur1, type_pari=type_pari, valeur_choisie=valeur, montant=self.montant)
+    rejoindre_view = RejoindreView(message_id=None, joueur1=self.joueur1, type_pari=type_pari, valeur_choisie=valeur, montant=self.montant)
 
-message = await interaction.channel.send(
+    message = await interaction.channel.send(
     content=contenu_ping,
     embed=embed,
     view=rejoindre_view,
