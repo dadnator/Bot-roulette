@@ -236,6 +236,32 @@ async def duel(interaction: discord.Interaction, montant: int):
     view = PariView(interaction, montant)
     await interaction.response.send_message("Choisissez votre pari :", view=view, ephemeral=True)
 
+@bot.tree.command(name="quit", description="Annule le duel en cours que tu as lancé.")
+async def quit_duel(interaction: discord.Interaction):
+    duel_a_annuler = None
+    for message_id, duel_data in duels.items():
+        if duel_data["joueur1"].id == interaction.user.id:
+            duel_a_annuler = message_id
+            break
+
+    if duel_a_annuler is None:
+        await interaction.response.send_message("❌ Tu n'as aucun duel en attente à annuler.", ephemeral=True)
+        return
+
+    duels.pop(duel_a_annuler)
+
+    try:
+        message = await interaction.channel.fetch_message(duel_a_annuler)
+        embed = message.embeds[0]
+        embed.color = discord.Color.red()
+        embed.title += " (Annulé)"
+        embed.description = "⚠️ Ce duel a été annulé par son créateur."
+        await message.edit(embed=embed, view=None)
+    except Exception:
+        pass
+
+    await interaction.response.send_message("✅ Ton duel a bien été annulé.", ephemeral=True)
+
 
 @bot.event
 async def on_ready():
