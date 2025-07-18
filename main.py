@@ -143,6 +143,7 @@ class RejoindreView(discord.ui.View):
         result_embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention}\nChoix : {EMOJIS[valeur_joueur1]} `{valeur_joueur1.upper()}`", inline=True)
         result_embed.add_field(name="👤 Joueur 2", value=f"{self.joueur2.mention}\nChoix : {EMOJIS[valeur_joueur2]} `{valeur_joueur2.upper()}`", inline=True)
         result_embed.add_field(name=" ", value="─" * 20, inline=False)
+        result.add_field(name="💰 Montant misé", value=f"**{self.montant:,} kamas** par joueur", inline=False)
         result_embed.add_field(name="🏆 Gagnant", value=f"**{gagnant.mention}** remporte **{net_gain:,} kamas** 💰 (après 5% de commission)", inline=False)
         result_embed.set_footer(text="🎰 Duel terminé • Bonne chance pour le prochain !")
 
