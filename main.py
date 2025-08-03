@@ -211,12 +211,14 @@ class RejoindreView(discord.ui.View):
 
         await original_message.edit(embed=result_embed, view=None)
 
-        # Enregistrement en base
-        c.execute("""
-            INSERT INTO paris (joueur1_id, joueur2_id, montant, gagnant_id)
-            VALUES (?, ?, ?, ?)
-            """, (self.joueur1.id, self.joueur2.id, self.montant, gagnant.id))
-        conn.commit()
+       # --- Insertion dans la base ---
+        now = datetime.utcnow()
+        try:
+            c.execute("INSERT INTO paris (joueur1_id, joueur2_id, montant, gagnant_id, date) VALUES (?, ?, ?, ?, ?)",
+                      (self.joueur1.id, joueur2.id, self.montant, gagnant.id, now))
+            conn.commit()
+        except Exception as e:
+            print("Erreur insertion base:", e)
 
         duels.pop(self.message_id, None)
 
