@@ -135,7 +135,7 @@ class RejoindreView(discord.ui.View):
         )
         embed.description = (
             f"{self.joueur1.mention} a choisi : {EMOJIS[self.valeur_choisie]} **{self.valeur_choisie.upper()}** ({self.type_pari})\n"
-            f"Montant : **{self.montant:,}".replace(",", " ") + " kamas** 💰\n\n"
+            f"Montant : **{str(self.montant).replace(',', ' ')} kamas** 💰\n\n"
             f"{joueur2.mention} a rejoint le duel ! Un membre du groupe `croupier` peut lancer la roulette."
         )
         embed.color = discord.Color.blue()
@@ -368,6 +368,10 @@ class StatsView(discord.ui.View):
 # --- Commande /statsall : stats à vie ---
 @bot.tree.command(name="statsall", description="Affiche les stats de roulette à vie")
 async def statsall(interaction: discord.Interaction):
+    if not isinstance(interaction.channel, discord.TextChannel) or interaction.channel.name != "roulette":
+        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #roulette.", ephemeral=True)
+        return
+
     c.execute("""
     SELECT joueur_id,
            SUM(montant) as total_mise,
@@ -388,7 +392,6 @@ async def statsall(interaction: discord.Interaction):
         winrate = (victoires / total_paris * 100) if total_paris > 0 else 0.0
         stats.append((user_id, mises, kamas_gagnes, victoires, winrate, total_paris))
 
-    # Tri par kamas gagnés
     stats.sort(key=lambda x: x[2], reverse=True)
 
     if not stats:
@@ -397,6 +400,7 @@ async def statsall(interaction: discord.Interaction):
 
     view = StatsView(interaction, stats)
     await interaction.response.send_message(embed=view.get_embed(), view=view, ephemeral=False)
+
 
 # --- Commande /mystats : stats personnelles ---
 @bot.tree.command(name="mystats", description="Affiche tes statistiques de roulette personnelles.")
