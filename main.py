@@ -255,7 +255,7 @@ class PariView(discord.ui.View):
             description=(
                 f"{self.joueur1.mention} a choisi : {EMOJIS[valeur]} **{valeur.upper()}** ({type_pari})\n"
                 f"Montant misé : **{self.montant:,}".replace(",", " ") + " kamas** 💰\n"
-                f"Commission de 5% par joueur appliquée (Total gagné : **{int(self.montant * 2 * (1 - COMMISSION)):,}".replace(",", " ") + " kamas**)"
+                f"Commission de 5% (gain net : **{int(self.montant * 2 * (1 - COMMISSION)):,}".replace(",", " ") + " kamas**)"
             ),
             color=discord.Color.orange()
         )
