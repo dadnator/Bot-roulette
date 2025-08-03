@@ -135,7 +135,7 @@ class RejoindreView(discord.ui.View):
         )
         embed.description = (
             f"{self.joueur1.mention} a choisi : {EMOJIS[self.valeur_choisie]} **{self.valeur_choisie.upper()}** ({self.type_pari})\n"
-            f"Montant : **{self.montant:,}".replace(",", " ") kamas** 💰\n\n"
+            f"Montant : **{self.montant:,}".replace(",", " ") + " kamas** 💰\n\n"
             f"{joueur2.mention} a rejoint le duel ! Un membre du groupe `croupier` peut lancer la roulette."
         )
         embed.color = discord.Color.blue()
