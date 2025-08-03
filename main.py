@@ -382,7 +382,7 @@ async def statsall(interaction: discord.Interaction):
     c.execute("""
     SELECT joueur_id,
            SUM(montant) as total_mise,
-           SUM(CASE WHEN gagnant_id = joueur_id THEN montant * 2 ELSE 0 END) as kamas_gagnes,
+           SUM(CASE WHEN gagnant_id = joueur_id THEN montant * 2 * 0.95 ELSE 0 END) as kamas_gagnes,
            SUM(CASE WHEN gagnant_id = joueur_id THEN 1 ELSE 0 END) as victoires,
            COUNT(*) as total_paris
     FROM (
@@ -419,7 +419,7 @@ async def mystats(interaction: discord.Interaction):
     c.execute("""
     SELECT joueur_id,
            SUM(montant) as total_mise,
-           SUM(CASE WHEN gagnant_id = joueur_id THEN montant * 2 ELSE 0 END) as kamas_gagnes,
+           SUM(CASE WHEN gagnant_id = joueur_id THEN montant * 2 * 0.95 ELSE 0 END) as kamas_gagnes,
            SUM(CASE WHEN gagnant_id = joueur_id THEN 1 ELSE 0 END) as victoires,
            COUNT(*) as total_paris
     FROM (
