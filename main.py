@@ -93,54 +93,74 @@ class RejoindreView(discord.ui.View):
         self.joueur2 = None
 
     @discord.ui.button(label="🎯 Rejoindre le duel", style=discord.ButtonStyle.green, custom_id="rejoindre_duel")
-    async def rejoindre(self, interaction: discord.Interaction, button: discord.ui.Button):
-        joueur2 = interaction.user
+async def rejoindre(self, interaction: discord.Interaction, button: discord.ui.Button):
+    joueur2 = interaction.user
 
-        if joueur2.id == self.joueur1.id:
-            await interaction.response.send_message("❌ Tu ne peux pas rejoindre ton propre duel.", ephemeral=True)
+    if joueur2.id == self.joueur1.id:
+        await interaction.response.send_message("❌ Tu ne peux pas rejoindre ton propre duel.", ephemeral=True)
+        return
+
+    duel_data = duels.get(self.message_id)
+    if duel_data is None:
+        await interaction.response.send_message("❌ Ce duel n'existe plus ou a déjà été joué.", ephemeral=True)
+        return
+
+    for data in duels.values():
+        if data["joueur1"].id == joueur2.id or (
+            "joueur2" in data and data["joueur2"] and data["joueur2"].id == joueur2.id
+        ):
+            await interaction.response.send_message(
+                "❌ Tu participes déjà à un autre duel. Termine-le avant d’en rejoindre un autre.",
+                ephemeral=True
+            )
             return
 
-        duel_data = duels.get(self.message_id)
-        if duel_data is None:
-            await interaction.response.send_message("❌ Ce duel n'existe plus ou a déjà été joué.", ephemeral=True)
-            return
+    self.joueur2 = joueur2
+    duel_data["joueur2"] = joueur2
 
-        for data in duels.values():
-            if data["joueur1"].id == joueur2.id or (
-                "joueur2" in data and data["joueur2"] and data["joueur2"].id == joueur2.id
-            ):
-                await interaction.response.send_message(
-                    "❌ Tu participes déjà à un autre duel. Termine-le avant d’en rejoindre un autre.",
-                    ephemeral=True
-                )
-                return
+    self.rejoindre.disabled = True
 
-        self.joueur2 = joueur2
-        duel_data["joueur2"] = joueur2
+    self.lancer_roulette_button = discord.ui.Button(
+        label="🎰 Lancer la Roulette", style=discord.ButtonStyle.success, custom_id="lancer_roulette"
+    )
+    self.lancer_roulette_button.callback = self.lancer_roulette
+    self.add_item(self.lancer_roulette_button)
 
-        self.rejoindre.disabled = True
+    embed = interaction.message.embeds[0]
+    embed.set_field_at(
+        index=1,
+        name="👤 Joueur 2",
+        value=f"{joueur2.mention}\nChoix : {EMOJIS[self.opposés[self.valeur_choisie]]} `{self.opposés[self.valeur_choisie].upper()}`",
+        inline=True
+    )
+    embed.description = (
+        f"{self.joueur1.mention} a choisi : {EMOJIS[self.valeur_choisie]} **{self.valeur_choisie.upper()}** ({self.type_pari})\n"
+        f"Montant : **{str(self.montant).replace(',', ' ')} kamas** 💰\n\n"
+        f"{joueur2.mention} a rejoint le duel ! Un membre du groupe `croupier` peut lancer la roulette."
+    )
+    embed.color = discord.Color.blue()
 
-        self.lancer_roulette_button = discord.ui.Button(
-            label="🎰 Lancer la Roulette", style=discord.ButtonStyle.success, custom_id="lancer_roulette"
-        )
-        self.lancer_roulette_button.callback = self.lancer_roulette
-        self.add_item(self.lancer_roulette_button)
+    # Supprimer l'ancien message
+    try:
+        await interaction.message.delete()
+    except Exception as e:
+        print("Erreur suppression ancien message :", e)
 
-        embed = interaction.message.embeds[0]
-        embed.set_field_at(
-            index=1,
-            name="👤 Joueur 2",
-            value=f"{joueur2.mention}\nChoix : {EMOJIS[self.opposés[self.valeur_choisie]]} `{self.opposés[self.valeur_choisie].upper()}`",
-            inline=True
-        )
-        embed.description = (
-            f"{self.joueur1.mention} a choisi : {EMOJIS[self.valeur_choisie]} **{self.valeur_choisie.upper()}** ({self.type_pari})\n"
-            f"Montant : **{str(self.montant).replace(',', ' ')} kamas** 💰\n\n"
-            f"{joueur2.mention} a rejoint le duel ! Un membre du groupe `croupier` peut lancer la roulette."
-        )
-        embed.color = discord.Color.blue()
+    # Créer un nouveau message
+    nouveau_message = await interaction.channel.send(
+        content=f"{joueur2.mention} a rejoint le duel de {self.joueur1.mention} ! 🎯 Un croupier est attendu pour lancer la roulette.",
+        embed=embed,
+        view=self
+    )
 
-        await interaction.response.edit_message(embed=embed, view=self)
+    # Met à jour l'ID du message
+    self.message_id = nouveau_message.id
+    duel_data["message_id"] = nouveau_message.id
+
+    # Met à jour le dictionnaire des duels
+    duels.pop(interaction.message.id, None)
+    duels[nouveau_message.id] = duel_data
+
 
     async def lancer_roulette(self, interaction: discord.Interaction):
         role_croupier_found = any(role.name == "croupier" for role in interaction.user.roles)
