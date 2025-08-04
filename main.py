@@ -100,7 +100,7 @@ class RejoindreView(discord.ui.View):
         self.add_item(self.rejoindre)
 
     async def rejoindre_duel(self, interaction: discord.Interaction):
-    joueur2 = interaction.user
+        joueur2 = interaction.user
 
     if joueur2.id == self.joueur1.id:
         await interaction.response.send_message("❌ Tu ne peux pas rejoindre ton propre duel.", ephemeral=True)
