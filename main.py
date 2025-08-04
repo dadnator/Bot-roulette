@@ -100,13 +100,12 @@ class RejoindreView(discord.ui.View):
         self.add_item(self.rejoindre)
 
     async def rejoindre_duel(self, interaction: discord.Interaction):
-        joueur2 = interaction.user
+    joueur2 = interaction.user
 
     if joueur2.id == self.joueur1.id:
         await interaction.response.send_message("❌ Tu ne peux pas rejoindre ton propre duel.", ephemeral=True)
         return
 
-    # Empêche qu'un joueur rejoigne plusieurs duels
     for data in duels.values():
         if data["joueur1"].id == joueur2.id or (
             "joueur2" in data and data["joueur2"] and data["joueur2"].id == joueur2.id
@@ -117,13 +116,11 @@ class RejoindreView(discord.ui.View):
             )
             return
 
-    # ✅ On répond à Discord dès maintenant pour éviter l'échec de l'interaction
     await interaction.response.defer()
 
     self.joueur2 = joueur2
     self.rejoindre.disabled = True
 
-    # Ajouter bouton "Lancer la roulette"
     self.lancer_roulette_button = discord.ui.Button(
         label="🎰 Lancer la Roulette",
         style=discord.ButtonStyle.success,
@@ -132,7 +129,6 @@ class RejoindreView(discord.ui.View):
     self.lancer_roulette_button.callback = self.lancer_roulette
     self.add_item(self.lancer_roulette_button)
 
-    # Met à jour l'embed
     embed = interaction.message.embeds[0]
     embed.set_field_at(
         index=1,
@@ -147,7 +143,6 @@ class RejoindreView(discord.ui.View):
     )
     embed.color = discord.Color.blue()
 
-    # Préparer les données avant suppression
     duel_data = {
         "joueur1": self.joueur1,
         "joueur2": joueur2,
