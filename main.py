@@ -256,6 +256,55 @@ class RejoindreView(discord.ui.View):
         result_embed = discord.Embed(
             title="🎲 Résultat du Duel Roulette",
             description=(
+    async def lancer_roulette(self, interaction: discord.Interaction):
+        # Vérifie si le croupier a déjà rejoint le duel.
+        if self.croupier is None:
+            await interaction.response.send_message("❌ Un croupier doit d'abord rejoindre le duel.", ephemeral=True)
+            return
+        
+        # Vérifie si l'utilisateur qui lance la roulette est bien le croupier qui a rejoint le duel.
+        if interaction.user.id != self.croupier.id:
+            await interaction.response.send_message("❌ Seul le croupier qui a rejoint ce duel peut lancer la roulette.", ephemeral=True)
+            return
+
+        self.lancer_roulette_button.disabled = True
+        await interaction.response.edit_message(view=self)
+
+        original_message = interaction.message
+
+        suspense_embed = discord.Embed(
+            title="🎰 La roulette tourne...",
+            description="On croise les doigts 🤞🏻 !",
+            color=discord.Color.greyple()
+        )
+        suspense_embed.set_image(url="https://i.makeagif.com/media/11-22-2017/gXYMAo.gif")
+        await original_message.edit(embed=suspense_embed, view=None)
+
+        for i in range(10, 0, -1):
+            await asyncio.sleep(1)
+            suspense_embed.title = f"🎰 Tirage en cours ..."
+            await original_message.edit(embed=suspense_embed)
+
+        numero = random.randint(1, 36)
+        ROUGES = {1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36}
+        NOIRS = {2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35}
+
+        couleur = "rouge" if numero in ROUGES else "noir"
+        parite = "pair" if numero % 2 == 0 else "impair"
+
+        valeur_joueur1 = self.valeur_choisie
+        valeur_joueur2 = self.opposés[valeur_joueur1]
+
+        condition_gagnante = (
+            couleur == valeur_joueur1 if self.type_pari == "couleur" else parite == valeur_joueur1
+        )
+
+        gagnant = self.joueur1 if condition_gagnante else self.joueur2
+        net_gain = int(self.montant * 2 * (1 - COMMISSION))
+
+        result_embed = discord.Embed(
+            title="🎲 Résultat du Duel Roulette",
+            description=(
                 f"🎯 **Numéro tiré** : `{numero}`\n"
                 f"{'🔴 Rouge' if couleur == 'rouge' else '⚫ Noir'} — "
                 f"{'🔢 Pair' if parite == 'pair' else '🔢 Impair'}"
@@ -287,6 +336,8 @@ class RejoindreView(discord.ui.View):
             print("❌ Erreur insertion base:", e)
 
         duels.pop(self.message_id_initial, None)
+
+
 
 
 class PariView(discord.ui.View):
