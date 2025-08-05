@@ -225,7 +225,6 @@ class RejoindreView(discord.ui.View):
         rejoindre_croupier_button.callback = new_view.rejoindre_croupier
         new_view.add_item(rejoindre_croupier_button)
 
-        # Gère le cas où le message initial aurait déjà été supprimé
         try:
             old_message = await interaction.channel.fetch_message(self.message_id_initial)
             await old_message.delete()
@@ -269,7 +268,7 @@ class RejoindreView(discord.ui.View):
                 break
         
         if self.lancer_roulette_button is None:
-            selfancer_roulette_button = discord.ui.Button(
+            self.lancer_roulette_button = discord.ui.Button(
                 label="🎰 Lancer la Roulette", style=discord.ButtonStyle.success, custom_id="lancer_roulette", row=0
             )
             self.lancer_roulette_button.callback = self.lancer_roulette
@@ -344,32 +343,35 @@ class PariView(discord.ui.View):
         if role_membre:
             contenu_ping = f"{role_membre.mention} — Un nouveau duel est prêt ! Un joueur est attendu."
         
-        await interaction.response.send_message(
+        message = await interaction.followup.send(
             content=contenu_ping,
             embed=embed,
             view=rejoindre_view,
             ephemeral=False,
             allowed_mentions=discord.AllowedMentions(roles=True)
         )
-
-        message = await interaction.original_response()
+        
         rejoindre_view.message_id_initial = message.id
         duels[message.id] = rejoindre_view
 
     @discord.ui.button(label="🔴 Rouge", style=discord.ButtonStyle.danger, custom_id="pari_rouge")
     async def rouge(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
         await self.lock_in_choice(interaction, "couleur", "rouge")
 
     @discord.ui.button(label="⚫ Noir", style=discord.ButtonStyle.secondary, custom_id="pari_noir")
     async def noir(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
         await self.lock_in_choice(interaction, "couleur", "noir")
 
     @discord.ui.button(label="🔢 Pair", style=discord.ButtonStyle.primary, custom_id="pari_pair")
     async def pair(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
         await self.lock_in_choice(interaction, "pair", "pair")
 
     @discord.ui.button(label="🔢 Impair", style=discord.ButtonStyle.blurple, custom_id="pari_impair")
     async def impair(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
         await self.lock_in_choice(interaction, "pair", "impair")
 
 class StatsView(discord.ui.View):
@@ -419,193 +421,3 @@ class StatsView(discord.ui.View):
     async def first_page(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.page = 0
         self.update_buttons()
-        await interaction.response.edit_message(embed=self.get_embed(), view=self)
-
-    @discord.ui.button(label="◀️", style=discord.ButtonStyle.secondary)
-    async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.page > 0:
-            self.page -= 1
-        self.update_buttons()
-        await interaction.response.edit_message(embed=self.get_embed(), view=self)
-
-    @discord.ui.button(label="▶️", style=discord.ButtonStyle.secondary)
-    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.page < self.max_page:
-            self.page += 1
-        self.update_buttons()
-        await interaction.response.edit_message(embed=self.get_embed(), view=self)
-
-    @discord.ui.button(label="⏭️", style=discord.ButtonStyle.secondary)
-    async def last_page(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.page = self.max_page
-        self.update_buttons()
-        await interaction.response.edit_message(embed=self.get_embed(), view=self)
-
-@bot.tree.command(name="statsall", description="Affiche les stats de roulette à vie")
-async def statsall(interaction: discord.Interaction):
-    if not isinstance(interaction.channel, discord.TextChannel) or interaction.channel.name != "roulette":
-        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #roulette.", ephemeral=True)
-        return
-
-    c.execute("""
-    SELECT joueur_id,
-           SUM(montant) as total_mise,
-           SUM(CASE WHEN gagnant_id = joueur_id THEN montant * 2 * 0.95 ELSE 0 END) as kamas_gagnes,
-           SUM(CASE WHEN gagnant_id = joueur_id THEN 1 ELSE 0 END) as victoires,
-           COUNT(*) as total_paris
-    FROM (
-        SELECT joueur1_id as joueur_id, montant, gagnant_id FROM paris
-        UNION ALL
-        SELECT joueur2_id as joueur_id, montant, gagnant_id FROM paris
-    )
-    GROUP BY joueur_id
-    """)
-    data = c.fetchall()
-
-    stats = []
-    for user_id, mises, kamas_gagnes, victoires, total_paris in data:
-        winrate = (victoires / total_paris * 100) if total_paris > 0 else 0.0
-        stats.append((user_id, mises, kamas_gagnes, victoires, winrate, total_paris))
-
-    stats.sort(key=lambda x: x[2], reverse=True)
-
-    if not stats:
-        await interaction.response.send_message("Aucune donnée statistique disponible.", ephemeral=True)
-        return
-
-    view = StatsView(interaction, stats)
-    await interaction.response.send_message(embed=view.get_embed(), view=view, ephemeral=False)
-
-@bot.tree.command(name="mystats", description="Affiche tes statistiques de roulette personnelles.")
-async def mystats(interaction: discord.Interaction):
-    user_id = interaction.user.id
-
-    c.execute("""
-    SELECT joueur_id,
-           SUM(montant) as total_mise,
-           SUM(CASE WHEN gagnant_id = joueur_id THEN montant * 2 * 0.95 ELSE 0 END) as kamas_gagnes,
-           SUM(CASE WHEN gagnant_id = joueur_id THEN 1 ELSE 0 END) as victoires,
-           COUNT(*) as total_paris
-    FROM (
-        SELECT joueur1_id as joueur_id, montant, gagnant_id FROM paris
-        UNION ALL
-        SELECT joueur2_id as joueur_id, montant, gagnant_id FROM paris
-    )
-    WHERE joueur_id = ?
-    GROUP BY joueur_id
-    """, (user_id,))
-    
-    stats_data = c.fetchone()
-
-    if not stats_data:
-        embed = discord.Embed(
-            title="📊 Tes Statistiques Roulette",
-            description="❌ Tu n'as pas encore participé à un duel. Joue ton premier duel pour voir tes stats !",
-            color=discord.Color.red()
-        )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-        return
-
-    _, mises, kamas_gagnes, victoires, total_paris = stats_data
-    winrate = (victoires / total_paris * 100) if total_paris > 0 else 0.0
-
-    embed = discord.Embed(
-        title=f"📊 Statistiques de {interaction.user.display_name}",
-        description="Voici un résumé de tes performances à la roulette.",
-        color=discord.Color.gold()
-    )
-
-    embed.add_field(name="Total misé", value=f"**{mises:,.0f}".replace(",", " ") + " kamas**", inline=False)
-    embed.add_field(name=" ", value="─" * 3, inline=False)
-    embed.add_field(name="Total gagné", value=f"**{kamas_gagnes:,.0f}".replace(",", " ") + " kamas**", inline=False)
-    embed.add_field(name=" ", value="─" * 20, inline=False)
-    embed.add_field(name="Duels joués", value=f"**{total_paris}**", inline=True)
-    embed.add_field(name=" ", value="─" * 3, inline=False)
-    embed.add_field(name="Victoires", value=f"**{victoires}**", inline=True)
-    embed.add_field(name=" ", value="─" * 3, inline=False)
-    embed.add_field(name="Taux de victoire", value=f"**{winrate:.1f}%**", inline=False)
-
-    embed.set_thumbnail(url=interaction.user.avatar.url if interaction.user.avatar else None)
-    embed.set_footer(text="Bonne chance pour tes prochains duels !")
-
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-
-@bot.tree.command(name="duel", description="Lancer un duel roulette avec un montant.")
-@app_commands.describe(montant="Montant misé en kamas")
-async def duel(interaction: discord.Interaction, montant: int):
-    if not isinstance(interaction.channel, discord.TextChannel) or interaction.channel.name != "roulette":
-        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #roulette.", ephemeral=True)
-        return
-
-    if montant <= 0:
-        await interaction.response.send_message("❌ Le montant doit être supérieur à 0.", ephemeral=True)
-        return
-
-    for duel_data in duels.values():
-        if isinstance(duel_data, dict) and duel_data["joueur1"].id == interaction.user.id or (
-            "joueur2" in duel_data and duel_data["joueur2"] and duel_data["joueur2"].id == interaction.user.id
-        ):
-            await interaction.response.send_message(
-                "❌ Tu participes déjà à un autre duel. Termine-le ou utilise `/quit` pour l'annuler.",
-                ephemeral=True
-            )
-            return
-        elif isinstance(duel_data, RejoindreView) and duel_data.joueur1.id == interaction.user.id or (
-            "joueur2" in duel_data.__dict__ and duel_data.joueur2 and duel_data.joueur2.id == interaction.user.id
-        ):
-            await interaction.response.send_message(
-                "❌ Tu participes déjà à un autre duel. Termine-le ou utilise `/quit` pour l'annuler.",
-                ephemeral=True
-            )
-            return
-
-    embed = discord.Embed(
-        title="🎰 Nouveau Duel Roulette",
-        description=f"Choisis ton pari pour **{montant:,}".replace(",", " ") + " kamas** 💰",
-        color=discord.Color.gold()
-    )
-    embed.set_footer(text="Ce message n'est visible que par toi.")
-
-    view = PariView(interaction, montant)
-    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
-@bot.tree.command(name="quit", description="Annule le duel en cours que tu as lancé.")
-async def quit_duel(interaction: discord.Interaction):
-    duel_a_annuler_id = None
-    for message_id, duel_data in duels.items():
-        if isinstance(duel_data, dict) and duel_data["joueur1"].id == interaction.user.id:
-            duel_a_annuler_id = message_id
-            break
-        elif isinstance(duel_data, RejoindreView) and duel_data.joueur1.id == interaction.user.id:
-            duel_a_annuler_id = message_id
-            break
-
-    if duel_a_annuler_id is None:
-        await interaction.response.send_message("❌ Tu n'as aucun duel en attente à annuler.", ephemeral=True)
-        return
-
-    duel_data = duels.pop(duel_a_annuler_id)
-
-    try:
-        message_initial = await interaction.channel.fetch_message(duel_a_annuler_id)
-        embed_initial = message_initial.embeds[0]
-        embed_initial.color = discord.Color.red()
-        embed_initial.title += " (Annulé)"
-        embed_initial.description = "⚠️ Ce duel a été annulé par son créateur."
-        await message_initial.edit(embed=embed_initial, view=None)
-    except Exception:
-        pass
-
-    await interaction.response.send_message("✅ Ton duel a bien été annulé.", ephemeral=True)
-
-@bot.event
-async def on_ready():
-    print(f"{bot.user} est prêt !")
-    try:
-        await bot.tree.sync()
-        print("✅ Commandes synchronisées.")
-    except Exception as e:
-        print(f"Erreur : {e}")
-
-keep_alive()
-bot.run(token)
