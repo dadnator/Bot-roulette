@@ -92,14 +92,13 @@ class RejoindreView(discord.ui.View):
         self.joueur2 = None
         self.croupier = None
         self.lancer_roulette_button = None
-        self.rejoindre_croupier_button = None
         
-        # Ajout du bouton pour les croupiers, qui est initialement caché
-        self.rejoindre_croupier_button = discord.ui.Button(
-            label="🎲 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="rejoindre_croupier", row=1
-        )
-        self.rejoindre_croupier_button.callback = self.rejoindre_croupier
-        self.add_item(self.rejoindre_croupier_button)
+        # Le bouton rejoindre_croupier ne sera plus ajouté ici, mais plus tard.
+        # self.rejoindre_croupier_button = discord.ui.Button(
+        #     label="🎲 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="rejoindre_croupier", row=1
+        # )
+        # self.rejoindre_croupier_button.callback = self.rejoindre_croupier
+        # self.add_item(self.rejoindre_croupier_button)
 
     @discord.ui.button(label="🎯 Rejoindre le duel", style=discord.ButtonStyle.green, custom_id="rejoindre_duel")
     async def rejoindre(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -129,11 +128,18 @@ class RejoindreView(discord.ui.View):
 
         self.rejoindre.disabled = True
         
+        # Création et ajout des deux boutons maintenant que le joueur 2 a rejoint
         self.lancer_roulette_button = discord.ui.Button(
-            label="🎰 Lancer la Roulette", style=discord.ButtonStyle.success, custom_id="lancer_roulette"
+            label="🎰 Lancer la Roulette", style=discord.ButtonStyle.success, custom_id="lancer_roulette", row=0
         )
         self.lancer_roulette_button.callback = self.lancer_roulette
         self.add_item(self.lancer_roulette_button)
+        
+        self.rejoindre_croupier_button = discord.ui.Button(
+            label="🎲 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="rejoindre_croupier", row=1
+        )
+        self.rejoindre_croupier_button.callback = self.rejoindre_croupier
+        self.add_item(self.rejoindre_croupier_button)
 
         embed_initial = interaction.message.embeds[0]
         embed_initial.set_field_at(1, name="👤 Joueur 2", value=f"{joueur2.mention}\nChoix : {EMOJIS[self.opposés[self.valeur_choisie]]} `{self.opposés[self.valeur_choisie].upper()}`", inline=True)
