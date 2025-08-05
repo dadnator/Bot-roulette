@@ -165,6 +165,7 @@ class RejoindreView(discord.ui.View):
     opposés = {"rouge": "noir", "noir": "rouge", "pair": "impair", "impair": "pair"}
 
     def __init__(self, message_id, joueur1, type_pari, valeur_choisie, montant):
+        # Désactive le timeout de la vue. Les boutons restent actifs jusqu'à la limite de Discord (7 jours).
         super().__init__(timeout=None)
         self.message_id_initial = message_id
         self.joueur1 = joueur1
@@ -199,12 +200,10 @@ class RejoindreView(discord.ui.View):
 
         self.joueur2 = joueur2
         
-        # Récupérer les données du duel et les mettre à jour
         duel_data = duels.get(self.message_id_initial)
         if duel_data:
             duel_data.joueur2 = joueur2
         else:
-            # Gérer le cas où le duel est introuvable, bien que cela ne devrait pas arriver
             await interaction.followup.send("❌ Ce duel n'existe plus ou a expiré.", ephemeral=True)
             return
 
@@ -310,24 +309,27 @@ class RejoindreView(discord.ui.View):
             "message_id_initial": duel_data.message_id_initial
         }, interaction.message.id)
 
-    async def on_timeout(self):
-        try:
-            message = await self.message.channel.fetch_message(self.message_id_initial)
-            for item in self.children:
-                item.disabled = True
-            embed = message.embeds[0]
-            embed.title += " (Annulé)"
-            embed.description = "⚠️ Ce duel a expiré car personne ne l'a rejoint à temps."
-            embed.color = discord.Color.red()
-            await message.edit(embed=embed, view=self)
-            duels.pop(self.message_id_initial, None)
-        except discord.NotFound:
-            pass
+    # La méthode on_timeout est retirée car le timeout est désactivé
+    # async def on_timeout(self):
+    #     try:
+    #         message = await self.message.channel.fetch_message(self.message_id_initial)
+    #         for item in self.children:
+    #             item.disabled = True
+    #         embed = message.embeds[0]
+    #         embed.title += " (Annulé)"
+    #         embed.description = "⚠️ Ce duel a expiré car personne ne l'a rejoint à temps."
+    #         embed.color = discord.Color.red()
+    #         await message.edit(embed=embed, view=self)
+    #         duels.pop(self.message_id_initial, None)
+    #     except discord.NotFound:
+    #         pass
 
 
 class PariView(discord.ui.View):
     def __init__(self, interaction, montant):
-        super().__init__(timeout=180)
+        # Désactive le timeout de la vue pour que les boutons de pari restent aussi
+        # actifs jusqu'à ce que le joueur fasse un choix.
+        super().__init__(timeout=None)
         self.interaction = interaction
         self.montant = montant
         self.joueur1 = interaction.user
@@ -350,6 +352,7 @@ class PariView(discord.ui.View):
         embed.add_field(name="Status", value="🎯 En attente d'un second joueur.", inline=False)
         embed.set_footer(text=f"📋 Pari pris : {self.joueur1.display_name} - {EMOJIS[valeur]} {valeur.upper()} | Choix restant : {EMOJIS[choix_restant]} {choix_restant.upper()}")
 
+        # La vue RejoindreView est créée avec timeout=None
         rejoindre_view = RejoindreView(message_id=None, joueur1=self.joueur1, type_pari=type_pari, valeur_choisie=valeur, montant=self.montant)
         
         role_membre = discord.utils.get(interaction.guild.roles, name="membre")
@@ -357,7 +360,10 @@ class PariView(discord.ui.View):
         if role_membre:
             contenu_ping = f"{role_membre.mention} — Un nouveau duel est prêt ! Un joueur est attendu."
         
-        message = await interaction.followup.send(
+        # Supprime le message ephemeral initial
+        await interaction.delete_original_response()
+
+        message = await interaction.channel.send(
             content=contenu_ping,
             embed=embed,
             view=rejoindre_view,
@@ -370,22 +376,22 @@ class PariView(discord.ui.View):
 
     @discord.ui.button(label="🔴 Rouge", style=discord.ButtonStyle.danger, custom_id="pari_rouge")
     async def rouge(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=False)
         await self.lock_in_choice(interaction, "couleur", "rouge")
 
     @discord.ui.button(label="⚫ Noir", style=discord.ButtonStyle.secondary, custom_id="pari_noir")
     async def noir(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=False)
         await self.lock_in_choice(interaction, "couleur", "noir")
 
     @discord.ui.button(label="🔢 Pair", style=discord.ButtonStyle.primary, custom_id="pari_pair")
     async def pair(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=False)
         await self.lock_in_choice(interaction, "pair", "pair")
 
     @discord.ui.button(label="🔢 Impair", style=discord.ButtonStyle.blurple, custom_id="pari_impair")
     async def impair(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=False)
         await self.lock_in_choice(interaction, "pair", "impair")
 
 class StatsView(discord.ui.View):
