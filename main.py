@@ -310,6 +310,11 @@ class PariView(discord.ui.View):
             await interaction.response.send_message("❌ Seul le joueur qui a lancé le duel peut choisir le pari.", ephemeral=True)
             return
 
+        # On désactive tous les boutons de la vue pour qu'ils ne soient plus cliquables
+        for item in self.children:
+            item.disabled = True
+        
+        # On modifie le message éphémère initial avec la nouvelle vue et le nouvel embed
         opposés = {"rouge": "noir", "noir": "rouge", "pair": "impair", "impair": "pair"}
         choix_restant = opposés[valeur]
 
@@ -333,11 +338,10 @@ class PariView(discord.ui.View):
         if role_membre:
             contenu_ping = f"{role_membre.mention} — Un nouveau duel est prêt ! Un joueur est attendu."
         
-        await interaction.response.send_message(
+        await interaction.response.edit_message(
             content=contenu_ping,
             embed=embed,
             view=rejoindre_view,
-            ephemeral=False,
             allowed_mentions=discord.AllowedMentions(roles=True)
         )
 
@@ -655,4 +659,3 @@ async def on_ready():
 
 keep_alive()
 bot.run(token)
-
