@@ -84,7 +84,7 @@ class RejoindreView(discord.ui.View):
     def __init__(self, message_id, joueur1, type_pari, valeur_choisie, montant):
         super().__init__(timeout=300)
         self.message_id_initial = message_id
-        self.message_id_final = None  # Nouvel ID pour le message final
+        self.message_id_final = None
         self.joueur1 = joueur1
         self.type_pari = type_pari
         self.valeur_choisie = valeur_choisie
@@ -117,17 +117,14 @@ class RejoindreView(discord.ui.View):
         self.joueur2 = joueur2
         duel_data["joueur2"] = joueur2
 
-        # Désactiver le bouton rejoindre
         self.rejoindre.disabled = True
         
-        # Créer le nouveau bouton et l'ajouter à la vue
         self.lancer_roulette_button = discord.ui.Button(
             label="🎰 Lancer la Roulette", style=discord.ButtonStyle.success, custom_id="lancer_roulette"
         )
         self.lancer_roulette_button.callback = self.lancer_roulette
         self.add_item(self.lancer_roulette_button)
 
-        # Récupération et modification de l'embed du message initial
         embed_initial = interaction.message.embeds[0]
         embed_initial.set_field_at(1, name="👤 Joueur 2", value=f"{joueur2.mention}\nChoix : {EMOJIS[self.opposés[self.valeur_choisie]]} `{self.opposés[self.valeur_choisie].upper()}`", inline=True)
         embed_initial.description = (
@@ -136,31 +133,39 @@ class RejoindreView(discord.ui.View):
         )
         embed_initial.color = discord.Color.greyple()
         
-        # Modifier le message initial pour qu'il ne contienne plus de boutons
         await interaction.message.edit(embed=embed_initial, view=None)
 
-        # Création du nouvel embed pour le nouveau message
+        # Création du nouvel embed selon votre format
         embed_final = discord.Embed(
-            title="🎰 Duel Roulette : Prêt !",
-            description=(
-                f"**{self.joueur1.mention}** a choisi : {EMOJIS[self.valeur_choisie]} **{self.valeur_choisie.upper()}**\n"
-                f"**{joueur2.mention}** a rejoint en choisissant : {EMOJIS[self.opposés[self.valeur_choisie]]} **{self.opposés[self.valeur_choisie].upper()}**\n\n"
-                f"Montant : **{self.montant:,}".replace(",", " ") + " kamas** 💰\n"
-                f"La commission de **5%** est déduite du gain total.\n\n"
-                f"Un membre du groupe `croupier` peut lancer la roulette."
-            ),
+            title=f"Duel entre {self.joueur1.display_name} et {self.joueur2.display_name}",
             color=discord.Color.blue()
         )
-        embed_final.set_footer(text=f"📋 Duel complet : {self.joueur1.display_name} vs {joueur2.display_name}")
+        embed_final.add_field(
+            name="Joueur 1",
+            value=f"{self.joueur1.mention} - {EMOJIS[self.valeur_choisie]} `{self.valeur_choisie.upper()}`",
+            inline=False
+        )
+        embed_final.add_field(
+            name="Joueur 2",
+            value=f"{self.joueur2.mention} - {EMOJIS[self.opposés[self.valeur_choisie]]} `{self.opposés[self.valeur_choisie].upper()}`",
+            inline=False
+        )
+        embed_final.add_field(
+            name="Montant",
+            value=f"**{self.montant:,}".replace(",", " ") + " kamas**",
+            inline=False
+        )
+        embed_final.add_field(
+            name="Status",
+            value="En attente d'un croupier",
+            inline=False
+        )
 
-        # Envoyer le nouveau message
         response_message = await interaction.response.send_message(embed=embed_final, view=self)
         
-        # Récupérer le message envoyé pour son ID
         response_message = await interaction.original_response()
         self.message_id_final = response_message.id
         
-        # Mettre à jour le dictionnaire duels avec le nouvel ID
         duel_data["message_id_final"] = self.message_id_final
 
     async def lancer_roulette(self, interaction: discord.Interaction):
@@ -270,15 +275,14 @@ class PariView(discord.ui.View):
         embed = discord.Embed(
             title="🎰 Duel Roulette",
             description=(
-                f"{self.joueur1.mention} a choisi : {EMOJIS[valeur]} **{valeur.upper()}** \n"
+                f"{self.joueur1.mention} veut lancer un duel sur le choix : {EMOJIS[valeur]} **{valeur.upper()}** \n"
                 f"Montant misé : **{self.montant:,}".replace(",", " ") + " kamas** 💰\n"
-                f"Commission de 5% (gain net : **{int(self.montant * 2 * (1 - COMMISSION)):,}".replace(",", " ") + " kamas**)"
             ),
             color=discord.Color.orange()
         )
-        embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention} - {EMOJIS[valeur]} {valeur}", inline=True)
-        embed.add_field(name="👤 Joueur 2", value="🕓 En attente...", inline=True)
-        embed.set_footer(text=f"📋 Pari pris : {self.joueur1.display_name} - {EMOJIS[valeur]} {valeur.upper()} | Choix restant : {EMOJIS[choix_restant]} {choix_restant.upper()}")
+        embed.add_field(name="Joueur 1", value=f"{self.joueur1.mention} - {EMOJIS[valeur]} {valeur}", inline=True)
+        embed.add_field(name="Joueur 2", value="🕓 En attente...", inline=True)
+        embed.set_footer(text=f"Le premier qui rejoint prend l'option restante : {EMOJIS[choix_restant]} {choix_restant.upper()}")
 
         await interaction.response.edit_message(view=None)
 
@@ -299,7 +303,7 @@ class PariView(discord.ui.View):
             "type": type_pari,
             "valeur": valeur,
             "joueur2": None,
-            "message_id_final": None # Initialisation du nouvel ID
+            "message_id_final": None
         }
 
     @discord.ui.button(label="🔴 Rouge", style=discord.ButtonStyle.danger, custom_id="pari_rouge")
@@ -522,7 +526,6 @@ async def quit_duel(interaction: discord.Interaction):
     duel_data = duels.pop(duel_a_annuler_id)
 
     try:
-        # Tenter d'éditer le message initial
         message_initial = await interaction.channel.fetch_message(duel_a_annuler_id)
         embed_initial = message_initial.embeds[0]
         embed_initial.color = discord.Color.red()
@@ -533,7 +536,6 @@ async def quit_duel(interaction: discord.Interaction):
         pass
 
     try:
-        # Tenter d'éditer le message final s'il existe
         if duel_data.get("message_id_final"):
             message_final = await interaction.channel.fetch_message(duel_data["message_id_final"])
             embed_final = message_final.embeds[0]
