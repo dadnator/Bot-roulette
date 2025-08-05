@@ -245,7 +245,7 @@ class RejoindreView(discord.ui.View):
 
         for i in range(10, 0, -1):
             await asyncio.sleep(1)
-            suspense_embed.title = f"🎰 Tirage en cours dans {i}..."
+            suspense_embed.title = f"🎰 Tirage en cours ..."
             await original_message.edit(embed=suspense_embed)
 
         await asyncio.sleep(1) # Attendre 1 seconde avant le résultat final
