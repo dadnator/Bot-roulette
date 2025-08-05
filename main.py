@@ -314,11 +314,18 @@ class PariView(discord.ui.View):
         for item in self.children:
             item.disabled = True
         
-        # On modifie le message éphémère initial avec la nouvelle vue et le nouvel embed
+        # On édite le message éphémère initial pour le rendre inactif
+        await interaction.response.edit_message(
+            content=f"✅ Pari choisi : **{EMOJIS[valeur]} {valeur.upper()}** pour **{self.montant:,}".replace(",", " ") + " kamas**. Le duel est en cours de création...",
+            embed=None,
+            view=self
+        )
+
+        # On prépare le message public
         opposés = {"rouge": "noir", "noir": "rouge", "pair": "impair", "impair": "pair"}
         choix_restant = opposés[valeur]
 
-        embed = discord.Embed(
+        public_embed = discord.Embed(
             title=f"🎰 Duel Roulette en attente de joueur",
             description=(
                 f"{self.joueur1.mention} a choisi : {EMOJIS[valeur]} **{valeur.upper()}** \n"
@@ -326,36 +333,37 @@ class PariView(discord.ui.View):
             ),
             color=discord.Color.orange()
         )
-        embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention}", inline=True)
-        embed.add_field(name="👤 Joueur 2", value="🕓 En attente...", inline=True)
-        embed.add_field(name="Status", value="🎯 En attente d'un second joueur.", inline=False)
-        embed.set_footer(text=f"📋 Pari pris : {self.joueur1.display_name} - {EMOJIS[valeur]} {valeur.upper()} | Choix restant : {EMOJIS[choix_restant]} {choix_restant.upper()}")
+        public_embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention}", inline=True)
+        public_embed.add_field(name="👤 Joueur 2", value="🕓 En attente...", inline=True)
+        public_embed.add_field(name="Status", value="🎯 En attente d'un second joueur.", inline=False)
+        public_embed.set_footer(text=f"📋 Pari pris : {self.joueur1.display_name} - {EMOJIS[valeur]} {valeur.upper()} | Choix restant : {EMOJIS[choix_restant]} {choix_restant.upper()}")
 
-        rejoindre_view = RejoindreView(message_id=None, joueur1=self.joueur1, type_pari=type_pari, valeur_choisie=valeur, montant=self.montant)
+        public_rejoindre_view = RejoindreView(message_id=None, joueur1=self.joueur1, type_pari=type_pari, valeur_choisie=valeur, montant=self.montant)
         
         role_membre = discord.utils.get(interaction.guild.roles, name="membre")
         contenu_ping = ""
         if role_membre:
             contenu_ping = f"{role_membre.mention} — Un nouveau duel est prêt ! Un joueur est attendu."
         
-        await interaction.response.edit_message(
+        # On envoie le message public en utilisant `interaction.followup.send`
+        public_message = await interaction.followup.send(
             content=contenu_ping,
-            embed=embed,
-            view=rejoindre_view,
+            embed=public_embed,
+            view=public_rejoindre_view,
+            ephemeral=False,
             allowed_mentions=discord.AllowedMentions(roles=True)
         )
 
-        message = await interaction.original_response()
-        rejoindre_view.message_id_initial = message.id
+        public_rejoindre_view.message_id_initial = public_message.id
 
-        duels[message.id] = {
+        duels[public_message.id] = {
             "joueur1": self.joueur1,
             "montant": self.montant,
             "type": type_pari,
             "valeur": valeur,
             "joueur2": None,
             "croupier": None,
-            "message_id_initial": message.id
+            "message_id_initial": public_message.id
         }
 
     @discord.ui.button(label="🔴 Rouge", style=discord.ButtonStyle.danger, custom_id="pari_rouge")
