@@ -275,14 +275,15 @@ class PariView(discord.ui.View):
         embed = discord.Embed(
             title="🎰 Duel Roulette",
             description=(
-                f"{self.joueur1.mention} veut lancer un duel sur le choix : {EMOJIS[valeur]} **{valeur.upper()}** \n"
+                f"{self.joueur1.mention} a choisi : {EMOJIS[valeur]} **{valeur.upper()}** \n"
                 f"Montant misé : **{self.montant:,}".replace(",", " ") + " kamas** 💰\n"
+                f"Commission de 5% (gain net : **{int(self.montant * 2 * (1 - COMMISSION)):,}".replace(",", " ") + " kamas**)"
             ),
             color=discord.Color.orange()
         )
-        embed.add_field(name="Joueur 1", value=f"{self.joueur1.mention} - {EMOJIS[valeur]} {valeur}", inline=True)
-        embed.add_field(name="Joueur 2", value="🕓 En attente...", inline=True)
-        embed.set_footer(text=f"Le premier qui rejoint prend l'option restante : {EMOJIS[choix_restant]} {choix_restant.upper()}")
+        embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention} - {EMOJIS[valeur]} {valeur}", inline=True)
+        embed.add_field(name="👤 Joueur 2", value="🕓 En attente...", inline=True)
+        embed.set_footer(text=f"📋 Pari pris : {self.joueur1.display_name} - {EMOJIS[valeur]} {valeur.upper()} | Choix restant : {EMOJIS[choix_restant]} {choix_restant.upper()}")
 
         await interaction.response.edit_message(view=None)
 
