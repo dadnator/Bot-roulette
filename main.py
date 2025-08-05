@@ -195,14 +195,13 @@ class RejoindreView(discord.ui.View):
                 )
                 return
         
-        old_message = interaction.message
+        # On utilise `defer` pour éviter l'échec d'interaction
         await interaction.response.defer()
 
         self.joueur2 = joueur2
         duel_data = duels.pop(self.message_id_initial)
         duel_data["joueur2"] = joueur2
         
-        # Crée un nouvel embed avec le format mis à jour pour les joueurs
         embed = discord.Embed(
             title=f"Duel entre {self.joueur1.display_name} et {self.joueur2.display_name}",
             description=f"Montant misé : **{self.montant:,}".replace(",", " ") + " kamas** 💰",
@@ -227,7 +226,13 @@ class RejoindreView(discord.ui.View):
         rejoindre_croupier_button.callback = new_view.rejoindre_croupier
         new_view.add_item(rejoindre_croupier_button)
 
-        await old_message.delete()
+        # Gère le cas où le message initial aurait déjà été supprimé
+        try:
+            old_message = await interaction.channel.fetch_message(self.message_id_initial)
+            await old_message.delete()
+        except discord.NotFound:
+            pass # Le message n'existe plus, on continue
+
         new_message = await interaction.channel.send(
             content=contenu_ping,
             embed=embed,
