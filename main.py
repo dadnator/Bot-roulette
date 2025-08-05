@@ -157,7 +157,7 @@ class RejoindreView(discord.ui.View):
         )
         embed_final.add_field(
             name="Status",
-            value="En attente d'un croupier",
+            value="⏳ En attente d'un croupier",
             inline=False
         )
 
