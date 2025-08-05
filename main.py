@@ -186,21 +186,28 @@ class RejoindreView(discord.ui.View):
             return
 
         for data in duels.values():
-            if data["joueur1"].id == joueur2.id or (
-                "joueur2" in data and data["joueur2"] and data["joueur2"].id == joueur2.id
-            ):
-                await interaction.response.send_message(
-                    "❌ Tu participes déjà à un autre duel. Termine-le avant d’en rejoindre un autre.",
-                    ephemeral=True
-                )
-                return
+            if isinstance(data, dict):
+                if data["joueur1"].id == joueur2.id or ("joueur2" in data and data["joueur2"] and data["joueur2"].id == joueur2.id):
+                    await interaction.response.send_message("❌ Tu participes déjà à un autre duel. Termine-le avant d’en rejoindre un autre.", ephemeral=True)
+                    return
+            elif isinstance(data, RejoindreView):
+                if data.joueur1.id == joueur2.id or (data.joueur2 and data.joueur2.id == joueur2.id):
+                    await interaction.response.send_message("❌ Tu participes déjà à un autre duel. Termine-le avant d’en rejoindre un autre.", ephemeral=True)
+                    return
         
         await interaction.response.defer()
 
         self.joueur2 = joueur2
-        duel_data = duels.pop(self.message_id_initial)
-        duel_data["joueur2"] = joueur2
         
+        # Récupérer les données du duel et les mettre à jour
+        duel_data = duels.get(self.message_id_initial)
+        if duel_data:
+            duel_data.joueur2 = joueur2
+        else:
+            # Gérer le cas où le duel est introuvable, bien que cela ne devrait pas arriver
+            await interaction.followup.send("❌ Ce duel n'existe plus ou a expiré.", ephemeral=True)
+            return
+
         embed = discord.Embed(
             title=f"Duel entre {self.joueur1.display_name} et {self.joueur2.display_name}",
             description=f"Montant misé : **{self.montant:,}".replace(",", " ") + " kamas** 💰",
@@ -216,7 +223,7 @@ class RejoindreView(discord.ui.View):
         if role_croupier:
             contenu_ping = f"{role_croupier.mention} — Un nouveau duel est prêt ! Un croupier est attendu."
 
-        new_view = RejoindreView(message_id=None, joueur1=self.joueur1, type_pari=self.type_pari, valeur_choisie=self.valeur_choisie, montant=self.montant)
+        new_view = RejoindreView(message_id=self.message_id_initial, joueur1=self.joueur1, type_pari=self.type_pari, valeur_choisie=self.valeur_choisie, montant=self.montant)
         new_view.joueur2 = self.joueur2
         
         rejoindre_croupier_button = discord.ui.Button(
@@ -226,8 +233,7 @@ class RejoindreView(discord.ui.View):
         new_view.add_item(rejoindre_croupier_button)
 
         try:
-            old_message = await interaction.channel.fetch_message(self.message_id_initial)
-            await old_message.delete()
+            await interaction.message.delete()
         except discord.NotFound:
             pass 
 
@@ -255,7 +261,8 @@ class RejoindreView(discord.ui.View):
             
         self.croupier = interaction.user
         duel_data = duels.get(self.message_id_initial)
-        duel_data["croupier"] = self.croupier
+        if duel_data:
+            duel_data.croupier = self.croupier
 
         embed = interaction.message.embeds[0]
         
@@ -280,7 +287,7 @@ class RejoindreView(discord.ui.View):
     async def lancer_roulette(self, interaction: discord.Interaction):
         duel_data = duels.get(self.message_id_initial)
         
-        if not duel_data or not duel_data.get("joueur2"):
+        if not duel_data or not duel_data.joueur2:
             await interaction.response.send_message("❌ Le duel n'est pas prêt. Il faut deux joueurs.", ephemeral=True)
             return
         
@@ -294,7 +301,14 @@ class RejoindreView(discord.ui.View):
             item.disabled = True
         await interaction.edit_original_response(view=self)
         
-        await lancer_la_roulette(interaction, duel_data, interaction.message.id)
+        await lancer_la_roulette(interaction, {
+            "joueur1": duel_data.joueur1,
+            "joueur2": duel_data.joueur2,
+            "valeur": duel_data.valeur_choisie,
+            "montant": duel_data.montant,
+            "type": duel_data.type_pari,
+            "message_id_initial": duel_data.message_id_initial
+        }, interaction.message.id)
 
     async def on_timeout(self):
         try:
