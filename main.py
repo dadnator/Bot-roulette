@@ -333,7 +333,9 @@ class PariView(discord.ui.View):
             ),
             color=discord.Color.orange()
         )
-        public_embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention}", inline=True)
+        ### DÉBUT DE LA MODIFICATION ###
+        public_embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention} - {EMOJIS[valeur]} `{valeur.upper()}`", inline=True)
+        ### FIN DE LA MODIFICATION ###
         public_embed.add_field(name="👤 Joueur 2", value="🕓 En attente...", inline=True)
         public_embed.add_field(name="Status", value="🎯 En attente d'un second joueur.", inline=False)
         public_embed.set_footer(text=f"📋 Pari pris : {self.joueur1.display_name} - {EMOJIS[valeur]} {valeur.upper()} | Choix restant : {EMOJIS[choix_restant]} {choix_restant.upper()}")
@@ -628,7 +630,9 @@ async def quit_duel(interaction: discord.Interaction):
                 ),
                 color=discord.Color.orange()
             )
-            new_embed.add_field(name="👤 Joueur 1", value=f"{joueur1.mention}", inline=True)
+            ### DÉBUT DE LA MODIFICATION ###
+            new_embed.add_field(name="👤 Joueur 1", value=f"{joueur1.mention} - {EMOJIS[valeur_choisie]} `{valeur_choisie.upper()}`", inline=True)
+            ### FIN DE LA MODIFICATION ###
             new_embed.add_field(name="👤 Joueur 2", value="🕓 En attente...", inline=True)
             new_embed.add_field(name="Status", value="🎯 En attente d'un second joueur.", inline=False)
             new_embed.set_footer(text=f"📋 Pari pris : {joueur1.display_name} - {EMOJIS[valeur_choisie]} {valeur_choisie.upper()} | Choix restant : {EMOJIS[choix_restant]} {choix_restant.upper()}")
