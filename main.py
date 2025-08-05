@@ -128,7 +128,6 @@ class RejoindreView(discord.ui.View):
 
         self.rejoindre.disabled = True
         
-        # Création et ajout des deux boutons maintenant que le joueur 2 a rejoint
         self.lancer_roulette_button = discord.ui.Button(
             label="🎰 Lancer la Roulette", style=discord.ButtonStyle.success, custom_id="lancer_roulette", row=0
         )
@@ -141,16 +140,13 @@ class RejoindreView(discord.ui.View):
         self.rejoindre_croupier_button.callback = self.rejoindre_croupier
         self.add_item(self.rejoindre_croupier_button)
 
-        embed_initial = interaction.message.embeds[0]
-        embed_initial.set_field_at(1, name="👤 Joueur 2", value=f"{joueur2.mention}\nChoix : {EMOJIS[self.opposés[self.valeur_choisie]]} `{self.opposés[self.valeur_choisie].upper()}`", inline=True)
-        embed_initial.description = (
-            f"Duel en attente de lancement.\n"
-            f"**Le duel se déroule maintenant dans un nouveau message.**"
-        )
-        embed_initial.color = discord.Color.greyple()
+        # Création du message de ping pour les rôles
+        role_croupier = discord.utils.get(interaction.guild.roles, name="croupier")
+        role_membre = discord.utils.get(interaction.guild.roles, name="membre")
+        contenu_ping = ""
+        if role_membre and role_croupier:
+            contenu_ping = f"{role_membre.mention} {role_croupier.mention} — Un nouveau duel est prêt ! Un croupier est attendu."
         
-        await interaction.message.edit(embed=embed_initial, view=None)
-
         embed_final = discord.Embed(
             title=f"Duel entre {self.joueur1.display_name} et {self.joueur2.display_name}",
             color=discord.Color.blue()
@@ -176,12 +172,31 @@ class RejoindreView(discord.ui.View):
             inline=False
         )
         
-        response_message = await interaction.response.send_message(embed=embed_final, view=self)
+        # Envoie le nouveau message avec le ping et l'embed
+        await interaction.response.send_message(
+            content=contenu_ping,
+            embed=embed_final,
+            view=self,
+            allowed_mentions=discord.AllowedMentions(roles=True)
+        )
         
+        # Récupère le message qui vient d'être envoyé et son ID
         response_message = await interaction.original_response()
         self.message_id_final = response_message.id
         
-        duel_data["message_id_final"] = self.message_id_final
+        # Met à jour le dictionnaire des duels
+        duels[self.message_id_initial]["message_id_final"] = self.message_id_final
+
+        # Supprime le premier message du duel
+        try:
+            message_initial = await interaction.channel.fetch_message(self.message_id_initial)
+            await message_initial.delete()
+        except discord.NotFound:
+            print("❌ Le message initial du duel n'a pas pu être trouvé et supprimé.")
+
+    # ... reste des méthodes (rejoindre_croupier, lancer_roulette, on_timeout)
+
+
 
     async def rejoindre_croupier(self, interaction: discord.Interaction):
         role_croupier = discord.utils.get(interaction.guild.roles, name="croupier")
