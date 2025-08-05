@@ -204,33 +204,36 @@ class RejoindreView(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
 
     async def lancer_roulette(self, interaction: discord.Interaction):
-        # Vérifie si le croupier a déjà rejoint le duel.
         if self.croupier is None:
             await interaction.response.send_message("❌ Un croupier doit d'abord rejoindre le duel.", ephemeral=True)
             return
-        
-        # Vérifie si l'utilisateur qui lance la roulette est bien le croupier qui a rejoint le duel.
+
         if interaction.user.id != self.croupier.id:
             await interaction.response.send_message("❌ Seul le croupier qui a rejoint ce duel peut lancer la roulette.", ephemeral=True)
             return
 
+        # Désactiver les boutons de l'ancien message
         self.lancer_roulette_button.disabled = True
+        self.rejoindre_croupier_button.disabled = True
         await interaction.response.edit_message(view=self)
 
-        original_message = interaction.message
-
+        # Création et envoi de l'embed de suspense
         suspense_embed = discord.Embed(
             title="🎰 La roulette tourne...",
             description="On croise les doigts 🤞🏻 !",
             color=discord.Color.greyple()
         )
         suspense_embed.set_image(url="https://i.makeagif.com/media/11-22-2017/gXYMAo.gif")
-        await original_message.edit(embed=suspense_embed, view=None)
+        
+        # Envoie le message de suspense qui sera mis à jour par la boucle
+        original_message = await interaction.channel.send(embed=suspense_embed)
 
         for i in range(10, 0, -1):
             await asyncio.sleep(1)
-            suspense_embed.title = f"🎰 Tirage en cours ..."
+            suspense_embed.title = f"🎰 Tirage en cours dans {i}..."
             await original_message.edit(embed=suspense_embed)
+
+        await asyncio.sleep(1) # Attendre 1 seconde avant le résultat final
 
         numero = random.randint(1, 36)
         ROUGES = {1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36}
@@ -249,6 +252,7 @@ class RejoindreView(discord.ui.View):
         gagnant = self.joueur1 if condition_gagnante else self.joueur2
         net_gain = int(self.montant * 2 * (1 - COMMISSION))
 
+        # Création et envoi du nouvel embed de résultat
         result_embed = discord.Embed(
             title="🎲 Résultat du Duel Roulette",
             description=(
@@ -268,8 +272,21 @@ class RejoindreView(discord.ui.View):
         result_embed.add_field(name="💰 Montant misé", value=f"**{self.montant:,}".replace(",", " ") + " kamas** par joueur", inline=False)
         result_embed.add_field(name="🏆 Gagnant", value=f"**{gagnant.mention}** remporte **{net_gain:,}".replace(",", " ") + " kamas** 💰 (après 5% de commission)", inline=False)
         result_embed.set_footer(text="🎰 Duel terminé • Bonne chance pour le prochain !")
+        
+        # Envoie le résultat final dans un nouveau message
+        await interaction.channel.send(embed=result_embed)
 
-        await original_message.edit(embed=result_embed, view=None)
+        # Suppression de l'ancien message de duel (boutons + suspense)
+        try:
+            old_message_with_buttons = await interaction.channel.fetch_message(self.message_id_final)
+            await old_message_with_buttons.delete()
+        except discord.NotFound:
+            print("❌ L'ancien message de duel n'a pas pu être trouvé et supprimé.")
+
+        try:
+            await original_message.delete()
+        except discord.NotFound:
+            print("❌ Le message de suspense n'a pas pu être trouvé et supprimé.")
 
         now = datetime.utcnow()
         try:
