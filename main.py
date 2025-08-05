@@ -90,6 +90,16 @@ class RejoindreView(discord.ui.View):
         self.valeur_choisie = valeur_choisie
         self.montant = montant
         self.joueur2 = None
+        self.croupier = None
+        self.lancer_roulette_button = None
+        self.rejoindre_croupier_button = None
+        
+        # Ajout du bouton pour les croupiers, qui est initialement caché
+        self.rejoindre_croupier_button = discord.ui.Button(
+            label="🎲 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="rejoindre_croupier", row=1
+        )
+        self.rejoindre_croupier_button.callback = self.rejoindre_croupier
+        self.add_item(self.rejoindre_croupier_button)
 
     @discord.ui.button(label="🎯 Rejoindre le duel", style=discord.ButtonStyle.green, custom_id="rejoindre_duel")
     async def rejoindre(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -135,7 +145,6 @@ class RejoindreView(discord.ui.View):
         
         await interaction.message.edit(embed=embed_initial, view=None)
 
-        # Création du nouvel embed selon votre format
         embed_final = discord.Embed(
             title=f"Duel entre {self.joueur1.display_name} et {self.joueur2.display_name}",
             color=discord.Color.blue()
@@ -160,13 +169,33 @@ class RejoindreView(discord.ui.View):
             value="⏳ En attente d'un croupier",
             inline=False
         )
-
+        
         response_message = await interaction.response.send_message(embed=embed_final, view=self)
         
         response_message = await interaction.original_response()
         self.message_id_final = response_message.id
         
         duel_data["message_id_final"] = self.message_id_final
+
+    async def rejoindre_croupier(self, interaction: discord.Interaction):
+        role_croupier = discord.utils.get(interaction.guild.roles, name="croupier")
+
+        if role_croupier not in interaction.user.roles:
+            await interaction.response.send_message("❌ Tu n'as pas le rôle de `croupier` pour rejoindre ce duel.", ephemeral=True)
+            return
+
+        if self.croupier:
+            await interaction.response.send_message(f"❌ Un croupier ({self.croupier.mention}) a déjà rejoint le duel.", ephemeral=True)
+            return
+            
+        self.croupier = interaction.user
+        
+        embed = interaction.message.embeds[0]
+        embed.set_field_at(3, name="Status", value=f"✅ Croupier : {self.croupier.mention}", inline=False)
+        
+        self.rejoindre_croupier_button.disabled = True
+        
+        await interaction.response.edit_message(embed=embed, view=self)
 
     async def lancer_roulette(self, interaction: discord.Interaction):
         role_croupier_found = any(role.name == "croupier" for role in interaction.user.roles)
@@ -177,6 +206,10 @@ class RejoindreView(discord.ui.View):
 
         if self.joueur2 is None:
             await interaction.response.send_message("❌ Le joueur 2 n'a pas encore rejoint le duel.", ephemeral=True)
+            return
+        
+        if self.croupier is None:
+            await interaction.response.send_message("❌ Un croupier doit d'abord rejoindre le duel.", ephemeral=True)
             return
 
         self.lancer_roulette_button.disabled = True
