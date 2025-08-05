@@ -203,7 +203,7 @@ class RejoindreView(discord.ui.View):
         
         await interaction.response.edit_message(embed=embed, view=self)
 
-        async def lancer_roulette(self, interaction: discord.Interaction):
+    async def lancer_roulette(self, interaction: discord.Interaction):
         # Vérifie si le croupier a déjà rejoint le duel.
         if self.croupier is None:
             await interaction.response.send_message("❌ Un croupier doit d'abord rejoindre le duel.", ephemeral=True)
