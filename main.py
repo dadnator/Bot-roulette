@@ -63,7 +63,6 @@ ROULETTE_NUM_IMAGES = {
     36: "https://i.imgur.com/xo32lYq.png"
 }
 
-# --- Connexion SQLite et création table ---
 conn = sqlite3.connect("roulette_stats.db")
 c = conn.cursor()
 c.execute("""
@@ -84,7 +83,8 @@ class RejoindreView(discord.ui.View):
 
     def __init__(self, message_id, joueur1, type_pari, valeur_choisie, montant):
         super().__init__(timeout=300)
-        self.message_id = message_id
+        self.message_id_initial = message_id
+        self.message_id_final = None  # Nouvel ID pour le message final
         self.joueur1 = joueur1
         self.type_pari = type_pari
         self.valeur_choisie = valeur_choisie
@@ -99,7 +99,7 @@ class RejoindreView(discord.ui.View):
             await interaction.response.send_message("❌ Tu ne peux pas rejoindre ton propre duel.", ephemeral=True)
             return
 
-        duel_data = duels.get(self.message_id)
+        duel_data = duels.get(self.message_id_initial)
         if duel_data is None:
             await interaction.response.send_message("❌ Ce duel n'existe plus ou a déjà été joué.", ephemeral=True)
             return
@@ -117,42 +117,51 @@ class RejoindreView(discord.ui.View):
         self.joueur2 = joueur2
         duel_data["joueur2"] = joueur2
 
+        # Désactiver le bouton rejoindre
         self.rejoindre.disabled = True
-
+        
+        # Créer le nouveau bouton et l'ajouter à la vue
         self.lancer_roulette_button = discord.ui.Button(
             label="🎰 Lancer la Roulette", style=discord.ButtonStyle.success, custom_id="lancer_roulette"
         )
         self.lancer_roulette_button.callback = self.lancer_roulette
         self.add_item(self.lancer_roulette_button)
 
-        # Récupération de l'embed existant
-        embed = interaction.message.embeds[0]
-
-        # Mise à jour du champ du joueur 2
-        embed.set_field_at(
-            index=1,
-            name="👤 Joueur 2",
-            value=f"{joueur2.mention}\nChoix : {EMOJIS[self.opposés[self.valeur_choisie]]} `{self.opposés[self.valeur_choisie].upper()}`",
-            inline=True
+        # Récupération et modification de l'embed du message initial
+        embed_initial = interaction.message.embeds[0]
+        embed_initial.set_field_at(1, name="👤 Joueur 2", value=f"{joueur2.mention}\nChoix : {EMOJIS[self.opposés[self.valeur_choisie]]} `{self.opposés[self.valeur_choisie].upper()}`", inline=True)
+        embed_initial.description = (
+            f"Duel en attente de lancement.\n"
+            f"**Le duel se déroule maintenant dans un nouveau message.**"
         )
+        embed_initial.color = discord.Color.greyple()
+        
+        # Modifier le message initial pour qu'il ne contienne plus de boutons
+        await interaction.message.edit(embed=embed_initial, view=None)
 
-        # Mise à jour de la description pour l'état "Duel prêt"
-        embed.description = (
-            f"**{self.joueur1.mention}** a choisi : {EMOJIS[self.valeur_choisie]} **{self.valeur_choisie.upper()}**\n"
-            f"**{joueur2.mention}** a rejoint en choisissant : {EMOJIS[self.opposés[self.valeur_choisie]]} **{self.opposés[self.valeur_choisie].upper()}**\n\n"
-            f"Montant : **{self.montant:,}".replace(",", " ") + " kamas** 💰\n"
-            f"La commission de **5%** est déduite du gain total.\n\n"
-            f"Un membre du groupe `croupier` peut lancer la roulette."
+        # Création du nouvel embed pour le nouveau message
+        embed_final = discord.Embed(
+            title="🎰 Duel Roulette : Prêt !",
+            description=(
+                f"**{self.joueur1.mention}** a choisi : {EMOJIS[self.valeur_choisie]} **{self.valeur_choisie.upper()}**\n"
+                f"**{joueur2.mention}** a rejoint en choisissant : {EMOJIS[self.opposés[self.valeur_choisie]]} **{self.opposés[self.valeur_choisie].upper()}**\n\n"
+                f"Montant : **{self.montant:,}".replace(",", " ") + " kamas** 💰\n"
+                f"La commission de **5%** est déduite du gain total.\n\n"
+                f"Un membre du groupe `croupier` peut lancer la roulette."
+            ),
+            color=discord.Color.blue()
         )
-        
-        # Changement de couleur pour indiquer l'état "Prêt"
-        embed.color = discord.Color.blue()
-        
-        # Mise à jour du footer pour montrer les choix des deux joueurs
-        embed.set_footer(text=f"📋 Duel complet : {self.joueur1.display_name} vs {joueur2.display_name}")
+        embed_final.set_footer(text=f"📋 Duel complet : {self.joueur1.display_name} vs {joueur2.display_name}")
 
-        # Mise à jour du message original avec le nouvel embed et la nouvelle vue
-        await interaction.response.edit_message(embed=embed, view=self)
+        # Envoyer le nouveau message
+        response_message = await interaction.response.send_message(embed=embed_final, view=self)
+        
+        # Récupérer le message envoyé pour son ID
+        response_message = await interaction.original_response()
+        self.message_id_final = response_message.id
+        
+        # Mettre à jour le dictionnaire duels avec le nouvel ID
+        duel_data["message_id_final"] = self.message_id_final
 
     async def lancer_roulette(self, interaction: discord.Interaction):
         role_croupier_found = any(role.name == "croupier" for role in interaction.user.roles)
@@ -233,7 +242,7 @@ class RejoindreView(discord.ui.View):
         except Exception as e:
             print("❌ Erreur insertion base:", e)
 
-        duels.pop(self.message_id, None)
+        duels.pop(self.message_id_initial, None)
 
 
 class PariView(discord.ui.View):
@@ -282,14 +291,15 @@ class PariView(discord.ui.View):
             allowed_mentions=discord.AllowedMentions(roles=True)
         )
 
-        rejoindre_view.message_id = message.id
+        rejoindre_view.message_id_initial = message.id
 
         duels[message.id] = {
             "joueur1": self.joueur1,
             "montant": self.montant,
             "type": type_pari,
             "valeur": valeur,
-            "joueur2": None
+            "joueur2": None,
+            "message_id_final": None # Initialisation du nouvel ID
         }
 
     @discord.ui.button(label="🔴 Rouge", style=discord.ButtonStyle.danger, custom_id="pari_rouge")
@@ -499,25 +509,38 @@ async def duel(interaction: discord.Interaction, montant: int):
 
 @bot.tree.command(name="quit", description="Annule le duel en cours que tu as lancé.")
 async def quit_duel(interaction: discord.Interaction):
-    duel_a_annuler = None
+    duel_a_annuler_id = None
     for message_id, duel_data in duels.items():
         if duel_data["joueur1"].id == interaction.user.id:
-            duel_a_annuler = message_id
+            duel_a_annuler_id = message_id
             break
 
-    if duel_a_annuler is None:
+    if duel_a_annuler_id is None:
         await interaction.response.send_message("❌ Tu n'as aucun duel en attente à annuler.", ephemeral=True)
         return
 
-    duels.pop(duel_a_annuler)
+    duel_data = duels.pop(duel_a_annuler_id)
 
     try:
-        message = await interaction.channel.fetch_message(duel_a_annuler)
-        embed = message.embeds[0]
-        embed.color = discord.Color.red()
-        embed.title += " (Annulé)"
-        embed.description = "⚠️ Ce duel a été annulé par son créateur."
-        await message.edit(embed=embed, view=None)
+        # Tenter d'éditer le message initial
+        message_initial = await interaction.channel.fetch_message(duel_a_annuler_id)
+        embed_initial = message_initial.embeds[0]
+        embed_initial.color = discord.Color.red()
+        embed_initial.title += " (Annulé)"
+        embed_initial.description = "⚠️ Ce duel a été annulé par son créateur."
+        await message_initial.edit(embed=embed_initial, view=None)
+    except Exception:
+        pass
+
+    try:
+        # Tenter d'éditer le message final s'il existe
+        if duel_data.get("message_id_final"):
+            message_final = await interaction.channel.fetch_message(duel_data["message_id_final"])
+            embed_final = message_final.embeds[0]
+            embed_final.color = discord.Color.red()
+            embed_final.title += " (Annulé)"
+            embed_final.description = "⚠️ Ce duel a été annulé par son créateur."
+            await message_final.edit(embed=embed_final, view=None)
     except Exception:
         pass
 
