@@ -229,7 +229,12 @@ class RejoindreView(discord.ui.View):
 
         embed = interaction.message.embeds[0]
         embed.title = f"Duel entre {self.joueur1.display_name} et {self.joueur2.display_name}"
-        embed.set_field_at(1, name="👤 Joueur 2", value=f"{self.joueur2.mention}", inline=True)
+        
+        ### DÉBUT DE LA MODIFICATION ###
+        valeur_joueur2 = self.opposés[self.valeur_choisie]
+        embed.set_field_at(1, name="👤 Joueur 2", value=f"{self.joueur2.mention} - {EMOJIS[valeur_joueur2]} `{valeur_joueur2.upper()}`", inline=True)
+        ### FIN DE LA MODIFICATION ###
+        
         embed.set_field_at(2, name="Status", value="🎲 Un croupier est attendu pour lancer le duel.", inline=False)
         embed.set_footer(text="Cliquez sur le bouton pour rejoindre en tant que croupier.")
         
@@ -333,9 +338,7 @@ class PariView(discord.ui.View):
             ),
             color=discord.Color.orange()
         )
-        ### DÉBUT DE LA MODIFICATION ###
         public_embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention} - {EMOJIS[valeur]} `{valeur.upper()}`", inline=True)
-        ### FIN DE LA MODIFICATION ###
         public_embed.add_field(name="👤 Joueur 2", value="🕓 En attente...", inline=True)
         public_embed.add_field(name="Status", value="🎯 En attente d'un second joueur.", inline=False)
         public_embed.set_footer(text=f"📋 Pari pris : {self.joueur1.display_name} - {EMOJIS[valeur]} {valeur.upper()} | Choix restant : {EMOJIS[choix_restant]} {choix_restant.upper()}")
@@ -630,9 +633,7 @@ async def quit_duel(interaction: discord.Interaction):
                 ),
                 color=discord.Color.orange()
             )
-            ### DÉBUT DE LA MODIFICATION ###
             new_embed.add_field(name="👤 Joueur 1", value=f"{joueur1.mention} - {EMOJIS[valeur_choisie]} `{valeur_choisie.upper()}`", inline=True)
-            ### FIN DE LA MODIFICATION ###
             new_embed.add_field(name="👤 Joueur 2", value="🕓 En attente...", inline=True)
             new_embed.add_field(name="Status", value="🎯 En attente d'un second joueur.", inline=False)
             new_embed.set_footer(text=f"📋 Pari pris : {joueur1.display_name} - {EMOJIS[valeur_choisie]} {valeur_choisie.upper()} | Choix restant : {EMOJIS[choix_restant]} {choix_restant.upper()}")
