@@ -195,7 +195,6 @@ class RejoindreView(discord.ui.View):
                 )
                 return
         
-        # On utilise `defer` pour éviter l'échec d'interaction
         await interaction.response.defer()
 
         self.joueur2 = joueur2
@@ -231,7 +230,7 @@ class RejoindreView(discord.ui.View):
             old_message = await interaction.channel.fetch_message(self.message_id_initial)
             await old_message.delete()
         except discord.NotFound:
-            pass # Le message n'existe plus, on continue
+            pass 
 
         new_message = await interaction.channel.send(
             content=contenu_ping,
@@ -270,7 +269,7 @@ class RejoindreView(discord.ui.View):
                 break
         
         if self.lancer_roulette_button is None:
-            self.lancer_roulette_button = discord.ui.Button(
+            selfancer_roulette_button = discord.ui.Button(
                 label="🎰 Lancer la Roulette", style=discord.ButtonStyle.success, custom_id="lancer_roulette", row=0
             )
             self.lancer_roulette_button.callback = self.lancer_roulette
