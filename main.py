@@ -27,7 +27,6 @@ COMMISSION = 0.05
 ROULETTE_NUM_IMAGES = {
     1: "https://i.imgur.com/zTpdyuX.png",
     2: "https://i.imgur.com/M3a3LrX.png",
-    # ... continue pour tous les numéros jusqu'à 36
     3: "https://i.imgur.com/ORf5wZr.png",
     4: "https://i.imgur.com/GhwJ3AV.png",
     5: "https://i.imgur.com/eS5hta4.png",
@@ -61,7 +60,7 @@ ROULETTE_NUM_IMAGES = {
     33: "https://i.imgur.com/UN3qTKl.png",
     34: "https://i.imgur.com/7wCgXNo.png",
     35: "https://i.imgur.com/qCNitVq.png",
-    36: "https://i.imgur.com/xo32lYq.png" # ou sa couleur réelle si elle est différente
+    36: "https://i.imgur.com/xo32lYq.png"
 }
 
 # --- Connexion SQLite et création table ---
@@ -126,20 +125,33 @@ class RejoindreView(discord.ui.View):
         self.lancer_roulette_button.callback = self.lancer_roulette
         self.add_item(self.lancer_roulette_button)
 
+        # Récupération de l'embed existant
         embed = interaction.message.embeds[0]
+
+        # Mise à jour du champ du joueur 2
         embed.set_field_at(
             index=1,
             name="👤 Joueur 2",
             value=f"{joueur2.mention}\nChoix : {EMOJIS[self.opposés[self.valeur_choisie]]} `{self.opposés[self.valeur_choisie].upper()}`",
             inline=True
         )
-        embed.description = (
-            f"{self.joueur1.mention} a choisi : {EMOJIS[self.valeur_choisie]} **{self.valeur_choisie.upper()}** ({self.type_pari})\n"
-            f"Montant : **{str(self.montant).replace(',', ' ')} kamas** 💰\n\n"
-            f"{joueur2.mention} a rejoint le duel ! Un membre du groupe `croupier` peut lancer la roulette."
-        )
-        embed.color = discord.Color.blue()
 
+        # Mise à jour de la description pour l'état "Duel prêt"
+        embed.description = (
+            f"**{self.joueur1.mention}** a choisi : {EMOJIS[self.valeur_choisie]} **{self.valeur_choisie.upper()}**\n"
+            f"**{joueur2.mention}** a rejoint en choisissant : {EMOJIS[self.opposés[self.valeur_choisie]]} **{self.opposés[self.valeur_choisie].upper()}**\n\n"
+            f"Montant : **{self.montant:,}".replace(",", " ") + " kamas** 💰\n"
+            f"La commission de **5%** est déduite du gain total.\n\n"
+            f"Un membre du groupe `croupier` peut lancer la roulette."
+        )
+        
+        # Changement de couleur pour indiquer l'état "Prêt"
+        embed.color = discord.Color.blue()
+        
+        # Mise à jour du footer pour montrer les choix des deux joueurs
+        embed.set_footer(text=f"📋 Duel complet : {self.joueur1.display_name} vs {joueur2.display_name}")
+
+        # Mise à jour du message original avec le nouvel embed et la nouvelle vue
         await interaction.response.edit_message(embed=embed, view=self)
 
     async def lancer_roulette(self, interaction: discord.Interaction):
@@ -198,7 +210,6 @@ class RejoindreView(discord.ui.View):
             color=discord.Color.green() if gagnant == self.joueur1 else discord.Color.red()
         )
 
-        # AJOUTE CETTE LIGNE POUR L'IMAGE DU NUMÉRO TIRÉ
         if numero in ROULETTE_NUM_IMAGES:
             result_embed.set_thumbnail(url=ROULETTE_NUM_IMAGES[numero])
 
@@ -211,7 +222,6 @@ class RejoindreView(discord.ui.View):
 
         await original_message.edit(embed=result_embed, view=None)
 
-       # --- Insertion dans la base ---
         now = datetime.utcnow()
         try:
             c.execute(
@@ -222,8 +232,6 @@ class RejoindreView(discord.ui.View):
             print(f"Duel inséré : {self.joueur1.id} vs {self.joueur2.id} — gagnant: {gagnant.id}")
         except Exception as e:
             print("❌ Erreur insertion base:", e)
-
-
 
         duels.pop(self.message_id, None)
 
@@ -300,7 +308,6 @@ class PariView(discord.ui.View):
     async def impair(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.lock_in_choice(interaction, "pair", "impair")
 
-# Pagination pour affichage stats
 class StatsView(discord.ui.View):
     def __init__(self, ctx, entries, page=0):
         super().__init__(timeout=120)
@@ -337,14 +344,12 @@ class StatsView(discord.ui.View):
                 f"<:emoji_2:1399792098529509546> **Gagnés** : **`{kamas_gagnes:,.0f}`".replace(",", " ") + " kamas** | "
                 f"**🎯Winrate** : **`{winrate:.1f}%`** (**{victoires}**/**{total_paris}**)\n"
             )
-            # Ajoute une ligne de séparation après chaque joueur sauf le dernier de la page
             if i < len(slice_entries) - 1:
                 description += "─" * 20 + "\n"
 
         embed.description = description
         embed.set_footer(text=f"Page {self.page + 1}/{self.max_page + 1}")
         return embed
-
 
     @discord.ui.button(label="⏮️", style=discord.ButtonStyle.secondary)
     async def first_page(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -372,7 +377,6 @@ class StatsView(discord.ui.View):
         self.update_buttons()
         await interaction.response.edit_message(embed=self.get_embed(), view=self)
 
-# --- Commande /statsall : stats à vie ---
 @bot.tree.command(name="statsall", description="Affiche les stats de roulette à vie")
 async def statsall(interaction: discord.Interaction):
     if not isinstance(interaction.channel, discord.TextChannel) or interaction.channel.name != "roulette":
@@ -408,14 +412,10 @@ async def statsall(interaction: discord.Interaction):
     view = StatsView(interaction, stats)
     await interaction.response.send_message(embed=view.get_embed(), view=view, ephemeral=False)
 
-
-# --- Commande /mystats : stats personnelles ---
 @bot.tree.command(name="mystats", description="Affiche tes statistiques de roulette personnelles.")
 async def mystats(interaction: discord.Interaction):
-    # Récupère l'ID de l'utilisateur qui a lancé la commande
     user_id = interaction.user.id
 
-    # Exécute une requête SQL pour obtenir les stats de l'utilisateur
     c.execute("""
     SELECT joueur_id,
            SUM(montant) as total_mise,
@@ -431,10 +431,8 @@ async def mystats(interaction: discord.Interaction):
     GROUP BY joueur_id
     """, (user_id,))
     
-    # Récupère le résultat de la requête
     stats_data = c.fetchone()
 
-    # Si aucune donnée n'est trouvée pour l'utilisateur
     if not stats_data:
         embed = discord.Embed(
             title="📊 Tes Statistiques Roulette",
@@ -444,18 +442,15 @@ async def mystats(interaction: discord.Interaction):
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
 
-    # Extrait les données de la requête
     _, mises, kamas_gagnes, victoires, total_paris = stats_data
     winrate = (victoires / total_paris * 100) if total_paris > 0 else 0.0
 
-    # Crée un embed pour afficher les statistiques
     embed = discord.Embed(
         title=f"📊 Statistiques de {interaction.user.display_name}",
         description="Voici un résumé de tes performances à la roulette.",
         color=discord.Color.gold()
     )
 
-    # Ajoute les champs avec les statistiques
     embed.add_field(name="Total misé", value=f"**{mises:,.0f}".replace(",", " ") + " kamas**", inline=False)
     embed.add_field(name=" ", value="─" * 3, inline=False)
     embed.add_field(name="Total gagné", value=f"**{kamas_gagnes:,.0f}".replace(",", " ") + " kamas**", inline=False)
@@ -502,7 +497,6 @@ async def duel(interaction: discord.Interaction, montant: int):
     view = PariView(interaction, montant)
     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-
 @bot.tree.command(name="quit", description="Annule le duel en cours que tu as lancé.")
 async def quit_duel(interaction: discord.Interaction):
     duel_a_annuler = None
@@ -529,7 +523,6 @@ async def quit_duel(interaction: discord.Interaction):
 
     await interaction.response.send_message("✅ Ton duel a bien été annulé.", ephemeral=True)
 
-
 @bot.event
 async def on_ready():
     print(f"{bot.user} est prêt !")
@@ -539,6 +532,6 @@ async def on_ready():
     except Exception as e:
         print(f"Erreur : {e}")
 
-
 keep_alive()
 bot.run(token)
+
