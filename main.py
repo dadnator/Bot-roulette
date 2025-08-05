@@ -562,28 +562,87 @@ async def duel(interaction: discord.Interaction, montant: int):
 @bot.tree.command(name="quit", description="Annule le duel en cours que tu as lancé.")
 async def quit_duel(interaction: discord.Interaction):
     duel_a_annuler_id = None
+    is_joueur2 = False
+
+    # Vérifier si l'utilisateur est joueur1
     for message_id, duel_data in duels.items():
         if duel_data["joueur1"].id == interaction.user.id:
             duel_a_annuler_id = message_id
             break
+    
+    # Si non, vérifier si l'utilisateur est joueur2
+    if not duel_a_annuler_id:
+        for message_id, duel_data in duels.items():
+            if "joueur2" in duel_data and duel_data["joueur2"] and duel_data["joueur2"].id == interaction.user.id:
+                duel_a_annuler_id = message_id
+                is_joueur2 = True
+                break
 
     if duel_a_annuler_id is None:
         await interaction.response.send_message("❌ Tu n'as aucun duel en attente à annuler.", ephemeral=True)
         return
 
-    duel_data = duels.pop(duel_a_annuler_id)
+    # Annuler complètement le duel si c'est joueur1
+    if not is_joueur2:
+        duel_data = duels.pop(duel_a_annuler_id)
+        try:
+            message_initial = await interaction.channel.fetch_message(duel_a_annuler_id)
+            embed_initial = message_initial.embeds[0]
+            embed_initial.color = discord.Color.red()
+            embed_initial.title += " (Annulé)"
+            embed_initial.description = "⚠️ Ce duel a été annulé par son créateur."
+            await message_initial.edit(embed=embed_initial, view=None)
+        except Exception:
+            pass
+        await interaction.response.send_message("✅ Ton duel a bien été annulé.", ephemeral=True)
+    else:
+        # Retirer le joueur2 si c'est lui qui utilise la commande
+        duel_data = duels.pop(duel_a_annuler_id)
+        try:
+            message_initial = await interaction.channel.fetch_message(duel_a_annuler_id)
+            joueur1 = duel_data["joueur1"]
+            montant = duel_data["montant"]
+            valeur_choisie = duel_data["valeur"]
+            type_pari = duel_data["type"]
+            
+            opposés = {"rouge": "noir", "noir": "rouge", "pair": "impair", "impair": "pair"}
+            choix_restant = opposés[valeur_choisie]
 
-    try:
-        message_initial = await interaction.channel.fetch_message(duel_a_annuler_id)
-        embed_initial = message_initial.embeds[0]
-        embed_initial.color = discord.Color.red()
-        embed_initial.title += " (Annulé)"
-        embed_initial.description = "⚠️ Ce duel a été annulé par son créateur."
-        await message_initial.edit(embed=embed_initial, view=None)
-    except Exception:
-        pass
+            new_embed = discord.Embed(
+                title=f"🎰 Duel Roulette en attente de joueur",
+                description=(
+                    f"{joueur1.mention} a choisi : {EMOJIS[valeur_choisie]} **{valeur_choisie.upper()}** \n"
+                    f"Montant misé : **{montant:,}".replace(",", " ") + " kamas** 💰"
+                ),
+                color=discord.Color.orange()
+            )
+            new_embed.add_field(name="👤 Joueur 1", value=f"{joueur1.mention}", inline=True)
+            new_embed.add_field(name="👤 Joueur 2", value="🕓 En attente...", inline=True)
+            new_embed.add_field(name="Status", value="🎯 En attente d'un second joueur.", inline=False)
+            new_embed.set_footer(text=f"📋 Pari pris : {joueur1.display_name} - {EMOJIS[valeur_choisie]} {valeur_choisie.upper()} | Choix restant : {EMOJIS[choix_restant]} {choix_restant.upper()}")
+            
+            new_view = RejoindreView(message_id=message_initial.id, joueur1=joueur1, type_pari=type_pari, valeur_choisie=valeur_choisie, montant=montant)
+            
+            duels[message_initial.id] = {
+                "joueur1": joueur1,
+                "montant": montant,
+                "type": type_pari,
+                "valeur": valeur_choisie,
+                "joueur2": None,
+                "croupier": None,
+                "message_id_initial": message_initial.id
+            }
 
-    await interaction.response.send_message("✅ Ton duel a bien été annulé.", ephemeral=True)
+            role_membre = discord.utils.get(interaction.guild.roles, name="membre")
+            contenu_ping = ""
+            if role_membre:
+                contenu_ping = f"{role_membre.mention} — Un nouveau duel est prêt ! Un joueur est attendu."
+
+            await message_initial.edit(content=contenu_ping, embed=new_embed, view=new_view, allowed_mentions=discord.AllowedMentions(roles=True))
+            await interaction.response.send_message("✅ Tu as quitté le duel. Le créateur attend maintenant un autre joueur.", ephemeral=True)
+        except Exception as e:
+            print(f"Erreur lors de l'annulation du duel par joueur2: {e}")
+            await interaction.response.send_message("❌ Une erreur s'est produite lors de l'annulation du duel.", ephemeral=True)
 
 @bot.event
 async def on_ready():
