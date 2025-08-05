@@ -77,7 +77,6 @@ CREATE TABLE IF NOT EXISTS paris (
 """)
 conn.commit()
 
-# --- Fonctions pour la roulette ---
 async def lancer_la_roulette(interaction, duel_data, message_id_final):
     joueur1 = duel_data["joueur1"]
     joueur2 = duel_data["joueur2"]
@@ -86,12 +85,6 @@ async def lancer_la_roulette(interaction, duel_data, message_id_final):
     type_pari = duel_data["type"]
     croupier = interaction.user
 
-    try:
-        old_message_with_buttons = await interaction.channel.fetch_message(message_id_final)
-        await old_message_with_buttons.delete()
-    except discord.NotFound:
-        pass
-
     suspense_embed = discord.Embed(
         title="🎰 La roulette tourne...",
         description="On croise les doigts 🤞🏻 !",
@@ -99,12 +92,12 @@ async def lancer_la_roulette(interaction, duel_data, message_id_final):
     )
     suspense_embed.set_image(url="https://i.makeagif.com/media/11-22-2017/gXYMAo.gif")
     
-    suspense_message = await interaction.channel.send(embed=suspense_embed)
+    original_message = await interaction.channel.send(embed=suspense_embed)
 
-    for i in range(5, 0, -1):
+    for i in range(10, 0, -1):
         await asyncio.sleep(1)
-        suspense_embed.title = f"🎰 Tirage en cours ({i})..."
-        await suspense_message.edit(embed=suspense_embed)
+        suspense_embed.title = f"🎰 Tirage en cours ..."
+        await original_message.edit(embed=suspense_embed)
 
     await asyncio.sleep(1)
 
@@ -126,28 +119,39 @@ async def lancer_la_roulette(interaction, duel_data, message_id_final):
     gagnant = joueur1 if condition_gagnante else joueur2
     net_gain = int(montant * 2 * (1 - COMMISSION))
 
-    result_embed = suspense_message.embeds[0]
-    result_embed.title = "🎲 Résultat du Duel Roulette"
-    result_embed.description = (
-        f"🎯 **Numéro tiré** : `{numero}`\n"
-        f"{'🔴 Rouge' if couleur == 'rouge' else '⚫ Noir'} — "
-        f"{'🔢 Pair' if parite == 'pair' else '🔢 Impair'}"
+    result_embed = discord.Embed(
+        title="🎲 Résultat du Duel Roulette",
+        description=(
+            f"🎯 **Numéro tiré** : `{numero}`\n"
+            f"{'🔴 Rouge' if couleur == 'rouge' else '⚫ Noir'} — "
+            f"{'🔢 Pair' if parite == 'pair' else '🔢 Impair'}"
+        ),
+        color=discord.Color.green() if gagnant == joueur1 else discord.Color.red()
     )
-    result_embed.color = discord.Color.green() if gagnant == joueur1 else discord.Color.red()
+
     if numero in ROULETTE_NUM_IMAGES:
         result_embed.set_thumbnail(url=ROULETTE_NUM_IMAGES[numero])
-    result_embed.set_image(url=discord.Embed.Empty)
-    
-    result_embed.clear_fields()
-    result_embed.add_field(name="👤 Joueur 1", value=f"{joueur1.mention} - {EMOJIS[valeur_joueur1]} `{valeur_joueur1.upper()}`", inline=True)
-    result_embed.add_field(name="👤 Joueur 2", value=f"{joueur2.mention} - {EMOJIS[valeur_joueur2]} `{valeur_joueur2.upper()}`", inline=True)
+
+    result_embed.add_field(name="👤 Joueur 1", value=f"{joueur1.mention}\nChoix : {EMOJIS[valeur_joueur1]} `{valeur_joueur1.upper()}`", inline=True)
+    result_embed.add_field(name="👤 Joueur 2", value=f"{joueur2.mention}\nChoix : {EMOJIS[valeur_joueur2]} `{valeur_joueur2.upper()}`", inline=False)
     result_embed.add_field(name=" ", value="─" * 20, inline=False)
     result_embed.add_field(name="💰 Montant misé", value=f"**{montant:,}".replace(",", " ") + " kamas** par joueur", inline=False)
     result_embed.add_field(name="🏆 Gagnant", value=f"**{gagnant.mention}** remporte **{net_gain:,}".replace(",", " ") + " kamas** 💰 (après 5% de commission)", inline=False)
     result_embed.set_footer(text="🎰 Duel terminé • Bonne chance pour le prochain !")
     
-    await suspense_message.edit(embed=result_embed)
-    
+    await interaction.channel.send(embed=result_embed)
+
+    try:
+        old_message_with_buttons = await interaction.channel.fetch_message(message_id_final)
+        await old_message_with_buttons.delete()
+    except discord.NotFound:
+        pass
+
+    try:
+        await original_message.delete()
+    except discord.NotFound:
+        pass
+
     now = datetime.utcnow()
     try:
         c.execute(
@@ -165,7 +169,6 @@ class RejoindreView(discord.ui.View):
     opposés = {"rouge": "noir", "noir": "rouge", "pair": "impair", "impair": "pair"}
 
     def __init__(self, message_id, joueur1, type_pari, valeur_choisie, montant):
-        # Désactive le timeout de la vue. Les boutons restent actifs jusqu'à la limite de Discord (7 jours).
         super().__init__(timeout=None)
         self.message_id_initial = message_id
         self.joueur1 = joueur1
@@ -177,6 +180,21 @@ class RejoindreView(discord.ui.View):
         
         self.rejoindre_croupier_button = None
         self.lancer_roulette_button = None
+        
+        if self.joueur2:
+            self.rejoindre.disabled = True
+            self.rejoindre_croupier_button = discord.ui.Button(
+                label="🎲 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="rejoindre_croupier", row=1
+            )
+            self.rejoindre_croupier_button.callback = self.rejoindre_croupier
+            self.add_item(self.rejoindre_croupier_button)
+        if self.croupier:
+            self.rejoindre_croupier_button.disabled = True
+            self.lancer_roulette_button = discord.ui.Button(
+                label="🎰 Lancer la Roulette", style=discord.ButtonStyle.success, custom_id="lancer_roulette", row=0
+            )
+            self.lancer_roulette_button.callback = self.lancer_roulette
+            self.add_item(self.lancer_roulette_button)
 
     @discord.ui.button(label="🎯 Rejoindre le duel", style=discord.ButtonStyle.green, custom_id="rejoindre_duel")
     async def rejoindre(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -187,65 +205,46 @@ class RejoindreView(discord.ui.View):
             return
 
         for data in duels.values():
-            if isinstance(data, dict):
-                if data["joueur1"].id == joueur2.id or ("joueur2" in data and data["joueur2"] and data["joueur2"].id == joueur2.id):
-                    await interaction.response.send_message("❌ Tu participes déjà à un autre duel. Termine-le avant d’en rejoindre un autre.", ephemeral=True)
-                    return
-            elif isinstance(data, RejoindreView):
-                if data.joueur1.id == joueur2.id or (data.joueur2 and data.joueur2.id == joueur2.id):
-                    await interaction.response.send_message("❌ Tu participes déjà à un autre duel. Termine-le avant d’en rejoindre un autre.", ephemeral=True)
-                    return
-        
-        await interaction.response.defer()
+            if data["joueur1"].id == joueur2.id or (
+                "joueur2" in data and data["joueur2"] and data["joueur2"].id == joueur2.id
+            ):
+                await interaction.response.send_message(
+                    "❌ Tu participes déjà à un autre duel. Termine-le avant d’en rejoindre un autre.",
+                    ephemeral=True
+                )
+                return
 
         self.joueur2 = joueur2
-        
         duel_data = duels.get(self.message_id_initial)
-        if duel_data:
-            duel_data.joueur2 = joueur2
-        else:
-            await interaction.followup.send("❌ Ce duel n'existe plus ou a expiré.", ephemeral=True)
-            return
+        duel_data["joueur2"] = joueur2
+        
+        self.rejoindre.disabled = True
+        
+        if self.rejoindre_croupier_button is None:
+            self.rejoindre_croupier_button = discord.ui.Button(
+                label="🎲 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="rejoindre_croupier", row=1
+            )
+            self.rejoindre_croupier_button.callback = self.rejoindre_croupier
+            self.add_item(self.rejoindre_croupier_button)
 
-        embed = discord.Embed(
-            title=f"Duel entre {self.joueur1.display_name} et {self.joueur2.display_name}",
-            description=f"Montant misé : **{self.montant:,}".replace(",", " ") + " kamas** 💰",
-            color=discord.Color.blue()
-        )
-        embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention} - {EMOJIS[self.valeur_choisie]} `{self.valeur_choisie.upper()}`", inline=True)
-        embed.add_field(name="👤 Joueur 2", value=f"{self.joueur2.mention} - {EMOJIS[self.opposés[self.valeur_choisie]]} `{self.opposés[self.valeur_choisie].upper()}`", inline=True)
-        embed.add_field(name="Status", value="🎲 Un croupier est attendu pour lancer le duel.", inline=False)
+        embed = interaction.message.embeds[0]
+        embed.title = f"Duel entre {self.joueur1.display_name} et {self.joueur2.display_name}"
+        embed.set_field_at(1, name="👤 Joueur 2", value=f"{self.joueur2.mention}", inline=True)
+        embed.set_field_at(2, name="Status", value="🎲 Un croupier est attendu pour lancer le duel.", inline=False)
         embed.set_footer(text="Cliquez sur le bouton pour rejoindre en tant que croupier.")
         
         role_croupier = discord.utils.get(interaction.guild.roles, name="croupier")
         contenu_ping = ""
         if role_croupier:
             contenu_ping = f"{role_croupier.mention} — Un nouveau duel est prêt ! Un croupier est attendu."
-
-        new_view = RejoindreView(message_id=self.message_id_initial, joueur1=self.joueur1, type_pari=self.type_pari, valeur_choisie=self.valeur_choisie, montant=self.montant)
-        new_view.joueur2 = self.joueur2
         
-        rejoindre_croupier_button = discord.ui.Button(
-            label="🎲 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="rejoindre_croupier", row=1
-        )
-        rejoindre_croupier_button.callback = new_view.rejoindre_croupier
-        new_view.add_item(rejoindre_croupier_button)
-
-        try:
-            await interaction.message.delete()
-        except discord.NotFound:
-            pass 
-
-        new_message = await interaction.channel.send(
+        await interaction.response.edit_message(
             content=contenu_ping,
             embed=embed,
-            view=new_view,
+            view=self,
             allowed_mentions=discord.AllowedMentions(roles=True)
         )
-        
-        new_view.message_id_initial = new_message.id
-        duels[new_message.id] = new_view
-        
+
 
     async def rejoindre_croupier(self, interaction: discord.Interaction):
         role_croupier = discord.utils.get(interaction.guild.roles, name="croupier")
@@ -260,18 +259,14 @@ class RejoindreView(discord.ui.View):
             
         self.croupier = interaction.user
         duel_data = duels.get(self.message_id_initial)
-        if duel_data:
-            duel_data.croupier = self.croupier
+        duel_data["croupier"] = self.croupier
 
         embed = interaction.message.embeds[0]
         
         embed.set_field_at(2, name="Status", value=f"✅ Prêt à jouer ! Croupier : {self.croupier.mention}", inline=False)
         embed.set_footer(text="Le croupier peut lancer la roulette.")
         
-        for item in self.children:
-            if item.custom_id == "rejoindre_croupier":
-                item.disabled = True
-                break
+        self.rejoindre_croupier_button.disabled = True
         
         if self.lancer_roulette_button is None:
             self.lancer_roulette_button = discord.ui.Button(
@@ -286,7 +281,7 @@ class RejoindreView(discord.ui.View):
     async def lancer_roulette(self, interaction: discord.Interaction):
         duel_data = duels.get(self.message_id_initial)
         
-        if not duel_data or not duel_data.joueur2:
+        if not duel_data or not duel_data.get("joueur2"):
             await interaction.response.send_message("❌ Le duel n'est pas prêt. Il faut deux joueurs.", ephemeral=True)
             return
         
@@ -300,35 +295,11 @@ class RejoindreView(discord.ui.View):
             item.disabled = True
         await interaction.edit_original_response(view=self)
         
-        await lancer_la_roulette(interaction, {
-            "joueur1": duel_data.joueur1,
-            "joueur2": duel_data.joueur2,
-            "valeur": duel_data.valeur_choisie,
-            "montant": duel_data.montant,
-            "type": duel_data.type_pari,
-            "message_id_initial": duel_data.message_id_initial
-        }, interaction.message.id)
-
-    # La méthode on_timeout est retirée car le timeout est désactivé
-    # async def on_timeout(self):
-    #     try:
-    #         message = await self.message.channel.fetch_message(self.message_id_initial)
-    #         for item in self.children:
-    #             item.disabled = True
-    #         embed = message.embeds[0]
-    #         embed.title += " (Annulé)"
-    #         embed.description = "⚠️ Ce duel a expiré car personne ne l'a rejoint à temps."
-    #         embed.color = discord.Color.red()
-    #         await message.edit(embed=embed, view=self)
-    #         duels.pop(self.message_id_initial, None)
-    #     except discord.NotFound:
-    #         pass
+        await lancer_la_roulette(interaction, duel_data, interaction.message.id)
 
 
 class PariView(discord.ui.View):
     def __init__(self, interaction, montant):
-        # Désactive le timeout de la vue pour que les boutons de pari restent aussi
-        # actifs jusqu'à ce que le joueur fasse un choix.
         super().__init__(timeout=None)
         self.interaction = interaction
         self.montant = montant
@@ -344,15 +315,17 @@ class PariView(discord.ui.View):
 
         embed = discord.Embed(
             title=f"🎰 Duel Roulette en attente de joueur",
-            description=f"Montant misé : **{self.montant:,}".replace(",", " ") + " kamas** 💰",
+            description=(
+                f"{self.joueur1.mention} a choisi : {EMOJIS[valeur]} **{valeur.upper()}** \n"
+                f"Montant misé : **{self.montant:,}".replace(",", " ") + " kamas** 💰"
+            ),
             color=discord.Color.orange()
         )
-        embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention} - {EMOJIS[valeur]} `{valeur.upper()}`", inline=True)
+        embed.add_field(name="👤 Joueur 1", value=f"{self.joueur1.mention}", inline=True)
         embed.add_field(name="👤 Joueur 2", value="🕓 En attente...", inline=True)
         embed.add_field(name="Status", value="🎯 En attente d'un second joueur.", inline=False)
         embed.set_footer(text=f"📋 Pari pris : {self.joueur1.display_name} - {EMOJIS[valeur]} {valeur.upper()} | Choix restant : {EMOJIS[choix_restant]} {choix_restant.upper()}")
 
-        # La vue RejoindreView est créée avec timeout=None
         rejoindre_view = RejoindreView(message_id=None, joueur1=self.joueur1, type_pari=type_pari, valeur_choisie=valeur, montant=self.montant)
         
         role_membre = discord.utils.get(interaction.guild.roles, name="membre")
@@ -360,38 +333,41 @@ class PariView(discord.ui.View):
         if role_membre:
             contenu_ping = f"{role_membre.mention} — Un nouveau duel est prêt ! Un joueur est attendu."
         
-        # Supprime le message ephemeral initial
-        await interaction.delete_original_response()
-
-        message = await interaction.channel.send(
+        await interaction.response.send_message(
             content=contenu_ping,
             embed=embed,
             view=rejoindre_view,
             ephemeral=False,
             allowed_mentions=discord.AllowedMentions(roles=True)
         )
-        
+
+        message = await interaction.original_response()
         rejoindre_view.message_id_initial = message.id
-        duels[message.id] = rejoindre_view
+
+        duels[message.id] = {
+            "joueur1": self.joueur1,
+            "montant": self.montant,
+            "type": type_pari,
+            "valeur": valeur,
+            "joueur2": None,
+            "croupier": None,
+            "message_id_initial": message.id
+        }
 
     @discord.ui.button(label="🔴 Rouge", style=discord.ButtonStyle.danger, custom_id="pari_rouge")
     async def rouge(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=False)
         await self.lock_in_choice(interaction, "couleur", "rouge")
 
     @discord.ui.button(label="⚫ Noir", style=discord.ButtonStyle.secondary, custom_id="pari_noir")
     async def noir(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=False)
         await self.lock_in_choice(interaction, "couleur", "noir")
 
     @discord.ui.button(label="🔢 Pair", style=discord.ButtonStyle.primary, custom_id="pari_pair")
     async def pair(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=False)
         await self.lock_in_choice(interaction, "pair", "pair")
 
     @discord.ui.button(label="🔢 Impair", style=discord.ButtonStyle.blurple, custom_id="pari_impair")
     async def impair(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=False)
         await self.lock_in_choice(interaction, "pair", "impair")
 
 class StatsView(discord.ui.View):
@@ -564,7 +540,7 @@ async def duel(interaction: discord.Interaction, montant: int):
         return
 
     for duel_data in duels.values():
-        if isinstance(duel_data, dict) and duel_data["joueur1"].id == interaction.user.id or (
+        if duel_data["joueur1"].id == interaction.user.id or (
             "joueur2" in duel_data and duel_data["joueur2"] and duel_data["joueur2"].id == interaction.user.id
         ):
             await interaction.response.send_message(
@@ -572,16 +548,6 @@ async def duel(interaction: discord.Interaction, montant: int):
                 ephemeral=True
             )
             return
-        elif isinstance(duel_data, RejoindreView) and duel_data.joueur1.id == interaction.user.id or (
-            "joueur2" in duel_data.__dict__ and duel_data.joueur2 and duel_data.joueur2.id == interaction.user.id
-        ):
-            await interaction.response.send_message(
-                "❌ Tu participes déjà à un autre duel. Termine-le ou utilise `/quit` pour l'annuler.",
-                ephemeral=True
-            )
-            return
-
-    await interaction.response.defer(ephemeral=True)
 
     embed = discord.Embed(
         title="🎰 Nouveau Duel Roulette",
@@ -591,17 +557,13 @@ async def duel(interaction: discord.Interaction, montant: int):
     embed.set_footer(text="Ce message n'est visible que par toi.")
 
     view = PariView(interaction, montant)
-    
-    await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 @bot.tree.command(name="quit", description="Annule le duel en cours que tu as lancé.")
 async def quit_duel(interaction: discord.Interaction):
     duel_a_annuler_id = None
     for message_id, duel_data in duels.items():
-        if isinstance(duel_data, dict) and duel_data["joueur1"].id == interaction.user.id:
-            duel_a_annuler_id = message_id
-            break
-        elif isinstance(duel_data, RejoindreView) and duel_data.joueur1.id == interaction.user.id:
+        if duel_data["joueur1"].id == interaction.user.id:
             duel_a_annuler_id = message_id
             break
 
@@ -634,3 +596,4 @@ async def on_ready():
 
 keep_alive()
 bot.run(token)
+
