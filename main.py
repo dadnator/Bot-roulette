@@ -138,7 +138,7 @@ async def lancer_la_roulette(interaction, duel_data, message_id_final):
     
     # Correction pour empêcher le retour à la ligne
     result_embed.add_field(name="🏆 Gagnant", value=f"**{gagnant.mention}** remporte **{net_gain:,}".replace(",", "\u00A0") + "\u00A0kamas** 💰 (après 5% de commission)", inline=False)
-    result_embed.add_field(name="💰 Montant misé", value=f"**{montant:,}".replace(",", "\u00A0") + "\u00A0kamas** par joueur", inline=False)
+    result_embed.add_field(name="💰 Montant misé", value=f"{montant:,}".replace(",", "\u00A0") + "\u00A0kamas par joueur", inline=False)
     
     result_embed.set_footer(text="🎰 Duel terminé • Bonne chance pour le prochain !")
     
