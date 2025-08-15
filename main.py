@@ -137,8 +137,8 @@ async def lancer_la_roulette(interaction, duel_data, message_id_final):
     result_embed.add_field(name=" ", value="─" * 20, inline=False)
     
     # Correction pour empêcher le retour à la ligne
-    result_embed.add_field(name="💰 Montant misé", value=f"**{montant:,}".replace(",", "\u00A0") + "\u00A0kamas** par joueur", inline=False)
     result_embed.add_field(name="🏆 Gagnant", value=f"**{gagnant.mention}** remporte **{net_gain:,}".replace(",", "\u00A0") + "\u00A0kamas** 💰 (après 5% de commission)", inline=False)
+    result_embed.add_field(name="💰 Montant misé", value=f"**{montant:,}".replace(",", "\u00A0") + "\u00A0kamas** par joueur", inline=False)
     
     result_embed.set_footer(text="🎰 Duel terminé • Bonne chance pour le prochain !")
     
@@ -420,8 +420,8 @@ class StatsView(discord.ui.View):
             rank = self.page * self.entries_per_page + i + 1
             description += (
                 f"**#{rank}** <@{user_id}> — "
-                f"<:emoji_2:1399792098529509546> **Misés** : **`{mises:,.0f}`".replace(",", " ") + " kamas** | "
-                f"<:emoji_2:1399792098529509546> **Gagnés** : **`{kamas_gagnes:,.0f}`".replace(",", " ") + " kamas** | "
+                f"< 💰 **Misés** : **`{mises:,.0f}`".replace(",", " ") + " kamas** | "
+                f"< 🏆 **Gagnés** : **`{kamas_gagnes:,.0f}`".replace(",", " ") + " kamas** | "
                 f"**🎯Winrate** : **`{winrate:.1f}%`** (**{victoires}**/**{total_paris}**)\n"
             )
             if i < len(slice_entries) - 1:
@@ -457,7 +457,7 @@ class StatsView(discord.ui.View):
         self.update_buttons()
         await interaction.response.edit_message(embed=self.get_embed(), view=self)
 
-@bot.tree.command(name="statsall", description="Affiche les stats de roulette à vie")
+@bot.tree.command(name="statsall", description="Affiche les stats de roulette ")
 async def statsall(interaction: discord.Interaction):
     if not isinstance(interaction.channel, discord.TextChannel) or interaction.channel.name != "roulette":
         await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #roulette.", ephemeral=True)
