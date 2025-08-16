@@ -655,7 +655,7 @@ async def quit_duel(interaction: discord.Interaction):
                 "message_id_initial": message_initial.id
             }
 
-            role_membre = discord.utils.get(interaction.guild.roles, name="membre")
+            role_membre = interaction.guild.get_role(ID_MEMBRE)
             contenu_ping = ""
             if role_membre:
                 contenu_ping = f"{role_membre.mention} — Un nouveau duel est prêt ! Un joueur est attendu."
