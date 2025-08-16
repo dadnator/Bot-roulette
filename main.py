@@ -243,7 +243,7 @@ class RejoindreView(discord.ui.View):
         embed.set_field_at(2, name="Status", value="🕓 Un croupier est attendu pour lancer le duel.", inline=False)
         embed.set_footer(text="Cliquez sur le bouton pour rejoindre en tant que croupier.")
         
-        role_croupier = discord.utils.get(interaction.guild.roles, name="croupier")
+        role_croupier = interaction.guild.get_role(ID_CROUPIER)
         contenu_ping = ""
         if role_croupier:
             contenu_ping = f"{role_croupier.mention} — Un nouveau duel est prêt ! Un croupier est attendu."
