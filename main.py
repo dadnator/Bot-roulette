@@ -13,6 +13,7 @@ token = os.environ['TOKEN_BOT_DISCORD']
 ID_CROUPIER = 1406210029815861258
 ID_MEMBRE = 1406210131515019355
 ID_SALON_ROULETTE = 1404445354690216096
+ID_SALON_LOG_COMMISSION = 1424661282023280671
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="/", intents=intents)
@@ -81,13 +82,36 @@ CREATE TABLE IF NOT EXISTS paris (
 """)
 conn.commit()
 
+async def log_commission(croupier: discord.Member, commission_amount: int, joueur1: discord.Member, joueur2: discord.Member, montant: int):
+    """Envoie un log de commission au format 'Croupier [Montant]'."""
+    log_channel = bot.get_channel(ID_SALON_LOG_COMMISSION)
+    
+    if log_channel is None:
+        print(f"❌ Le salon de log avec l'ID {ID_SALON_LOG_COMMISSION} est introuvable.")
+        return
+
+    # Formatage du montant avec des espaces (ex: 100 000 kamas)
+    com_formatted = f"{commission_amount:,.0f}".replace(",", "\u00A0")
+    
+    # Création du message au format "Croupier 100 000 kamas"
+    log_message = (
+        f"💸 **{croupier.display_name}** a prélevé **{com_formatted} kamas** de commission.\n"
+        f"| Duel : {joueur1.mention} vs {joueur2.mention} (Mise : {montant:,}".replace(",", "\u00A0") + " kamas par joueur)"
+    )
+    
+    try:
+        await log_channel.send(log_message)
+        print(f"✅ Log commission de {com_formatted} kamas envoyé pour le croupier {croupier.display_name}.")
+    except Exception as e:
+        print(f"❌ Erreur lors de l'envoi du log de commission: {e}")
+
 async def lancer_la_roulette(interaction, duel_data, message_id_final):
     joueur1 = duel_data["joueur1"]
     joueur2 = duel_data["joueur2"]
     valeur_choisie = duel_data["valeur"]
     montant = duel_data["montant"]
     type_pari = duel_data["type"]
-    croupier = interaction.user
+    croupier = duel_data["croupier"] 
 
     suspense_embed = discord.Embed(
         title="🎰 La roulette tourne...",
@@ -122,6 +146,7 @@ async def lancer_la_roulette(interaction, duel_data, message_id_final):
 
     gagnant = joueur1 if condition_gagnante else joueur2
     net_gain = int(montant * 2 * (1 - COMMISSION))
+    com_gain = int(montant * 2 * COMMISSION)
 
     result_embed = discord.Embed(
         title="🎲 Résultat du Duel Roulette",
@@ -143,6 +168,7 @@ async def lancer_la_roulette(interaction, duel_data, message_id_final):
     # Correction pour empêcher le retour à la ligne
     result_embed.add_field(name="🏆 Gagnant", value=f"**{gagnant.mention}** remporte **{net_gain:,}".replace(",", "\u00A0") + "\u00A0kamas** 💰 (après 5% de commission)", inline=False)
     result_embed.add_field(name="💰 Montant misé", value=f"{montant:,}".replace(",", "\u00A0") + "\u00A0kamas par joueur", inline=False)
+    result_embed.add_field(name="💰 Comissions", value=f"**{com_gain:,}".replace(",", "\u00A0") + "\u00A0kamas** 5% de commission", inline=False)
     
     result_embed.set_footer(text="🎰 Duel terminé • Bonne chance pour le prochain !")
     
@@ -169,6 +195,12 @@ async def lancer_la_roulette(interaction, duel_data, message_id_final):
     except Exception as e:
         print("❌ Erreur insertion base:", e)
 
+
+     # --- NOUVEAU BLOC AJOUTÉ ICI ---
+    # Log de la commission
+    if croupier and com_gain > 0:
+        await log_commission(croupier, com_gain, joueur1, joueur2, montant)
+    
     duels.pop(duel_data["message_id_initial"], None)
 
 # --- Vues Discord ---
@@ -253,6 +285,13 @@ class RejoindreView(discord.ui.View):
             embed=embed,
             view=self,
             allowed_mentions=discord.AllowedMentions(roles=True)
+        )
+
+     # 2. ENVOI DU MESSAGE DE NOTIFICATION DE MISE (Sans le montant)
+        await interaction.followup.send(
+            f"🎯 {self.joueur2.mention} **a rejoint le duel de** {self.joueur1.mention} \n "
+            f"{role_croupier.mention}, veuillez récupérer les mises du duel  .",
+            allowed_mentions=discord.AllowedMentions(roles=True, users=True) 
         )
 
 
